@@ -45,6 +45,7 @@ func (s *server) GetSoundJustHello(stream proto.SoundService_GetSoundJustHelloSe
 }
 
 // you will get rate 5000 and real .wav data
+// If you want to send to server and get from him that sound - just send your data in data field, with your rate, and server will return it in same format
 func (s *server) GetSound(stream proto.SoundService_GetSoundServer) error {
 	preparedData, err := os.ReadFile("output5000.wav")
 	fmt.Println(string(preparedData[:100]))
