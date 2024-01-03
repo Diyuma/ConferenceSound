@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "./;proto";
+
+service SoundService {
+    rpc GetSoundJustHello(stream ChatClientMessage) returns (stream ChatServerMessage);
+    rpc GetSound(stream ChatClientMessage) returns (stream ChatServerMessage);
+}
+
+// The message used in the chat.
+message ChatServerMessage {
+    bytes data = 1;
+    int64 rate = 2;
+}
+
+message ChatClientMessage {
+    bytes data = 1;
+    int64 rate = 2;
+    bool ready_to_send = 3;
+}
