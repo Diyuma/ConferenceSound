@@ -1,5 +1,5 @@
 syntax = "proto3";
-import "validate/validate.proto";
+//import "validate/validate.proto";
 
 package proto;
 
@@ -8,11 +8,8 @@ option go_package = "./;proto";
 service SoundService {
     rpc GetSound(ClientInfoMessage) returns (stream ChatServerMessage);
     rpc SendSound(ChatClientMessage) returns (ClientResponseMessage);
-    rpc InitClient(ClientInfoMessage) returns (ClientInitResponseMessage);
+    rpc InitClient(EmptyMessage) returns (ClientInitResponseMessage);
 }
-
-// GetSound(ChatClientMessage) should be GetSound(EmptyMessage)
-// SendSound(ChatClientMessage) should return (Int);
 
 message ChatServerMessage {
     repeated float data = 3; // fixed32?
@@ -25,12 +22,12 @@ message ChatServerMessage {
 message ChatClientMessage {
     repeated float data = 4;
     int64 rate = 2;
-    bool ready_to_send = 3;
-    uint64 soundId = 5;
     uint32 userId = 6;
     uint64 confId = 7;
 
-    reserved 1; // bytes data
+    reserved 1;
+    reserved 3; 
+    reserved 5;
 }
 
 message ClientResponseMessage {
@@ -40,11 +37,12 @@ message ClientResponseMessage {
 
 message ClientInfoMessage {
     uint64 confId = 1;
+    uint64 userId = 2;
 }
 
 
 message ClientInitResponseMessage {
-    uint32 clientId = 1;
+    uint32 userId = 1;
     uint64 confId = 2;
 }
 

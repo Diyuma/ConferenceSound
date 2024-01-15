@@ -9,7 +9,7 @@ import (
 )
 
 func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService_GetSoundServer) error {
-	uId := s.GenUserId()
+	uId := s.GenUserId() // no need to gen there - it is bug
 	cId := in.ConfId
 	ctx, cancel := context.WithCancelCause(context.Background())
 	soundStream := s.SendSoundDataStream(ctx, cancel, uId, cId)
