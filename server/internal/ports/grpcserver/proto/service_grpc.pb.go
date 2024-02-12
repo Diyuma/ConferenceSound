@@ -24,7 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type SoundServiceClient interface {
 	GetSound(ctx context.Context, in *ClientInfoMessage, opts ...grpc.CallOption) (SoundService_GetSoundClient, error)
 	SendSound(ctx context.Context, in *ChatClientMessage, opts ...grpc.CallOption) (*ClientResponseMessage, error)
-	InitClient(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientInitResponseMessage, error)
+	InitUser(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientUserInitResponseMessage, error)
+	InitConf(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientConfInitResponseMessage, error)
 }
 
 type soundServiceClient struct {
@@ -76,9 +77,18 @@ func (c *soundServiceClient) SendSound(ctx context.Context, in *ChatClientMessag
 	return out, nil
 }
 
-func (c *soundServiceClient) InitClient(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientInitResponseMessage, error) {
-	out := new(ClientInitResponseMessage)
-	err := c.cc.Invoke(ctx, "/proto.SoundService/InitClient", in, out, opts...)
+func (c *soundServiceClient) InitUser(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientUserInitResponseMessage, error) {
+	out := new(ClientUserInitResponseMessage)
+	err := c.cc.Invoke(ctx, "/proto.SoundService/InitUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *soundServiceClient) InitConf(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientConfInitResponseMessage, error) {
+	out := new(ClientConfInitResponseMessage)
+	err := c.cc.Invoke(ctx, "/proto.SoundService/InitConf", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +101,8 @@ func (c *soundServiceClient) InitClient(ctx context.Context, in *EmptyMessage, o
 type SoundServiceServer interface {
 	GetSound(*ClientInfoMessage, SoundService_GetSoundServer) error
 	SendSound(context.Context, *ChatClientMessage) (*ClientResponseMessage, error)
-	InitClient(context.Context, *EmptyMessage) (*ClientInitResponseMessage, error)
+	InitUser(context.Context, *EmptyMessage) (*ClientUserInitResponseMessage, error)
+	InitConf(context.Context, *EmptyMessage) (*ClientConfInitResponseMessage, error)
 	mustEmbedUnimplementedSoundServiceServer()
 }
 
@@ -105,8 +116,11 @@ func (UnimplementedSoundServiceServer) GetSound(*ClientInfoMessage, SoundService
 func (UnimplementedSoundServiceServer) SendSound(context.Context, *ChatClientMessage) (*ClientResponseMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendSound not implemented")
 }
-func (UnimplementedSoundServiceServer) InitClient(context.Context, *EmptyMessage) (*ClientInitResponseMessage, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InitClient not implemented")
+func (UnimplementedSoundServiceServer) InitUser(context.Context, *EmptyMessage) (*ClientUserInitResponseMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitUser not implemented")
+}
+func (UnimplementedSoundServiceServer) InitConf(context.Context, *EmptyMessage) (*ClientConfInitResponseMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitConf not implemented")
 }
 func (UnimplementedSoundServiceServer) mustEmbedUnimplementedSoundServiceServer() {}
 
@@ -160,20 +174,38 @@ func _SoundService_SendSound_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SoundService_InitClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SoundService_InitUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EmptyMessage)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SoundServiceServer).InitClient(ctx, in)
+		return srv.(SoundServiceServer).InitUser(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.SoundService/InitClient",
+		FullMethod: "/proto.SoundService/InitUser",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SoundServiceServer).InitClient(ctx, req.(*EmptyMessage))
+		return srv.(SoundServiceServer).InitUser(ctx, req.(*EmptyMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SoundService_InitConf_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmptyMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoundServiceServer).InitConf(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.SoundService/InitConf",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoundServiceServer).InitConf(ctx, req.(*EmptyMessage))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -190,8 +222,12 @@ var SoundService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SoundService_SendSound_Handler,
 		},
 		{
-			MethodName: "InitClient",
-			Handler:    _SoundService_InitClient_Handler,
+			MethodName: "InitUser",
+			Handler:    _SoundService_InitUser_Handler,
+		},
+		{
+			MethodName: "InitConf",
+			Handler:    _SoundService_InitConf_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

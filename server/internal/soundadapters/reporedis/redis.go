@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// TODO check if I need to use there mutex
 type RepositoryRedis struct {
 	ctx    context.Context
 	client *redis.Client
@@ -36,10 +37,10 @@ func (repo *RepositoryRedis) SetSound(k string, v *sound.Sound, tExp time.Durati
 		return err
 	}
 
-	repo.client.Set(repo.ctx, k, buf.String(), tExp)
-	return nil
+	return repo.client.Set(repo.ctx, k, buf.String(), tExp).Err()
 }
 
+// TODO Check for redis.nil error
 func (repo *RepositoryRedis) GetSound(k string) (*sound.Sound, error) {
 	res, err := repo.client.Get(repo.ctx, k).Bytes()
 	if err != nil {
@@ -57,10 +58,13 @@ func (repo *RepositoryRedis) GetSound(k string) (*sound.Sound, error) {
 	return &sw, nil
 }
 
-func (repo *RepositoryRedis) GetDelSound(k string) (*sound.Sound, error) {
+func (repo *RepositoryRedis) GetDelSound(k string) (bool, *sound.Sound, error) {
 	res, err := repo.client.GetDel(repo.ctx, k).Bytes()
+	if err == redis.Nil {
+		return false, nil, nil
+	}
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
 	var buf *bytes.Buffer = bytes.NewBuffer(res)
@@ -68,10 +72,10 @@ func (repo *RepositoryRedis) GetDelSound(k string) (*sound.Sound, error) {
 
 	var sw sound.Sound
 	if err := enc.Decode(sw); err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
-	return &sw, nil
+	return true, &sw, nil
 }
 
 /*func (repo *RepositoryRedis) Add(k int, sw sound.Sound, tExp time.Duration) error {

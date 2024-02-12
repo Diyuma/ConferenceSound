@@ -18,6 +18,8 @@ type ServerLoggers struct {
 	RepoLogger   *zap.Logger
 }
 
+// TODO: move sound interface choosing there
+// TODO: add app logger (now server logger and app logger are merged)
 func RunServer(addr string, repoaddr string, slg ServerLoggers, opts ...grpcserver.ServerOption) {
 	var err error
 
@@ -37,7 +39,7 @@ func RunServer(addr string, repoaddr string, slg ServerLoggers, opts ...grpcserv
 		defer slg.RepoLogger.Sync()
 	}
 
-	lis, s := grpcserver.NewServer(app.NewApp(reporedis.NewRepo(context.Background(), repoaddr, slg.RepoLogger), soundwav.NewEmptySound()), slg.ServerLogger, addr, opts...)
+	lis, s := grpcserver.NewServer(app.NewApp(reporedis.NewRepo(context.Background(), repoaddr, slg.RepoLogger), soundwav.NewEmptySound(), slg.ServerLogger), slg.ServerLogger, addr, opts...)
 
 	slg.ServerLogger.Info("Server is listenning", zap.String("addr", addr))
 	if err := s.Serve(lis); err != nil {
@@ -46,8 +48,8 @@ func RunServer(addr string, repoaddr string, slg ServerLoggers, opts ...grpcserv
 }
 
 func main() {
-	var serverAddr = flag.String("serveraddr", ":8081", "Server listening address")
-	var redisAddr = flag.String("serveraddr", ":8088", "Redis listening address")
+	var serverAddr = flag.String("serveraddr", ":9090", "Server listening address")
+	var redisAddr = flag.String("redisaddr", ":8088", "Redis listening address")
 	flag.Parse()
 
 	if serverAddr == nil || redisAddr == nil {
