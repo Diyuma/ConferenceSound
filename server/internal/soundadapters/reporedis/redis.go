@@ -51,7 +51,7 @@ func (repo *RepositoryRedis) GetSound(k string) (*sound.Sound, error) {
 	enc := gob.NewDecoder(buf)
 
 	var sw sound.Sound
-	if err := enc.Decode(sw); err != nil {
+	if err := enc.Decode(sw); err != nil || sw == nil {
 		return nil, err
 	}
 
@@ -71,7 +71,7 @@ func (repo *RepositoryRedis) GetDelSound(k string) (bool, *sound.Sound, error) {
 	enc := gob.NewDecoder(buf)
 
 	var sw sound.Sound
-	if err := enc.Decode(sw); err != nil {
+	if err := enc.Decode(sw); err != nil || sw == nil {
 		return false, nil, err
 	}
 

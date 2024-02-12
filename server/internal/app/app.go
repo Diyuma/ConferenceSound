@@ -19,6 +19,7 @@ type App struct {
 var ErrorNoSuchUserIdFound error = errors.New("can't get last sound id to that user because no such user id found")
 var ErrorIncorrectSoundDuration error = errors.New("incorrect sound duration - not dividable by sound grain duration")
 var ErrorExpectedSoundGrainDuration error = errors.New("expected sound duration equal to sound grain duration")
+var ErrorExpectedNonNillSound error = errors.New("expected to work with real object, not nill")
 
 const SoundGrainDuration = 256 // in ms
 
@@ -143,11 +144,15 @@ func (a *App) SetSound(s sound.Sound, userId uint32, confId uint64) ([]uint64, e
 // what will happen if 2 goroutines will run this func in same time (to sound arr)
 func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64) (uint64, error) {
 	if s == nil {
-		a.logger.Error("sound is nil")
+		a.logger.Warn(ErrorExpectedNonNillSound.Error(), zap.Uint32("userId", userId), zap.Uint64("confId", confId))
+		return 0, ErrorExpectedNonNillSound
 	}
-	a.logger.Info("SetGrainSound", zap.Int("duration", s.GetSoundDuration()), zap.Int("bitRate", s.GetBitRate()), zap.Int("dataLen", int(len(*s.GetData()))))
+
+	a.logger.Info("SetGrainSound", zap.Int("duration", s.GetSoundDuration()), zap.Int("bitRate", s.GetBitRate()), zap.Int("dataLen", int(len(*s.GetData()))),
+		zap.Uint32("userId", userId), zap.Uint64("confId", confId))
 
 	if s.GetSoundDuration() != SoundGrainDuration {
+		a.logger.Warn("Unexpected sound duration")
 		return 0, ErrorExpectedSoundGrainDuration
 	}
 
@@ -158,31 +163,22 @@ func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64) (uint64
 	key := fmt.Sprintf("%d:%d", soundId, confId)
 	ok, sNow, err := a.repo.GetDelSound(key)
 	if err != nil {
+		a.logger.Warn("Tried to get current sound from repo, got error", zap.Error(err))
 		return 0, err
 	}
 
 	if ok {
-		if sNow == nil || *sNow == nil { // there was a mistake with null pointers
-			a.logger.Error("sNow is nil, but mustnt be", zap.String("Redis key", key))
-			return 0, errors.New("unexpected error - sNow is nil")
-		}
-		a.logger.Info("sNow", zap.Any("sNow", sNow)) // !!!
-		a.logger.Info("s", zap.Any("s", s))
 		err = (*sNow).Add(&s)
 		if err != nil {
+			a.logger.Warn("Tried to add one sound to another, got error", zap.Error(err))
 			return 0, err
 		}
 	} else {
 		sNow = &s
 	}
-	sNow = &s
-
-	if sNow == nil {
-		a.logger.Error("sNow is nil, but mustnt be", zap.String("Redis key", key))
-		return 0, errors.New("unexpected error - sNow is nil")
-	}
 
 	if err := a.repo.SetSound(key, sNow, genTimeExpiration()); err != nil {
+		a.logger.Error("Tried to set new sound, got error", zap.Error(err))
 		return 0, err
 	}
 

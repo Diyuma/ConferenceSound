@@ -65,10 +65,8 @@ func (s *SoundWav) SetTimeId(id uint64) {
 
 // TODO check what is better - to use avarage or just take every kth
 func (s *SoundWav) RebitSound(newBitRate int) error {
-	//s.logger.Info("Trying to rebit sound", zap.Int("Current bitRate", s.BitRate), zap.Int("New bitRate", newBitRate))
 	if s.BitRate > newBitRate {
 		if s.BitRate%newBitRate != 0 {
-			//s.logger.Error("Failed to rebit sound:", zap.Int("Current bitRate", s.BitRate), zap.Int("New bitRate", newBitRate))
 			return ErrorCantRebitIncorrectBitrate
 		}
 
@@ -80,7 +78,6 @@ func (s *SoundWav) RebitSound(newBitRate int) error {
 		(*s.Data) = (*s.Data)[:len(*s.Data)/k]
 	} else {
 		if newBitRate%s.BitRate != 0 {
-			//s.logger.Error("Failed to rebit sound:", zap.Int("Current bitRate", s.BitRate), zap.Int("New bitRate", newBitRate))
 			return ErrorCantRebitIncorrectBitrate
 		}
 
@@ -98,7 +95,7 @@ func (s *SoundWav) RebitSound(newBitRate int) error {
 }
 
 func (s *SoundWav) Add(s2 *sound.Sound) error {
-	/*if s == nil {
+	if s == nil {
 		return errors.New("s is nil")
 	}
 	if s2 == nil {
@@ -109,21 +106,20 @@ func (s *SoundWav) Add(s2 *sound.Sound) error {
 	}
 	if (*s2).GetData() == nil {
 		return errors.New("s2.data is nil")
-	}*/
+	}
 
-	/*if len(*s.Data)*(*s2).GetBitRate() != len(*(*s2).GetData())*s.BitRate { // !!!! A bug as why we mult not by our own bitrate
+	if len(*s.Data)*(*s2).GetBitRate() != len(*(*s2).GetData())*s.BitRate { // TODO Check for cotecteness
 		return ErrorNotEqualSoundDuration
-	}*/
+	}
 
-	//s.Authors = append(s.Authors, (*s2).GetAuthors()...)
-	/*if (*s2).GetBitRate() != s.BitRate {
-		return errors.New("try to rebit")
+	s.Authors = append(s.Authors, (*s2).GetAuthors()...)
+	if (*s2).GetBitRate() != s.BitRate {
 		if err := (*s2).RebitSound(s.BitRate); err != nil { // change s2 bitrate to s bitrate
 			return err
 		}
-	}*/
+	}
 
-	/*if s == nil {
+	if s == nil {
 		return errors.New("s is nil")
 	}
 	if s2 == nil {
@@ -134,11 +130,11 @@ func (s *SoundWav) Add(s2 *sound.Sound) error {
 	}
 	if (*s2).GetData() == nil {
 		return errors.New("s2.data is nil")
-	}*/
+	}
 
-	//for i := 0; i < len(*s.Data); i++ {
-	//(*s.Data)[i] += (*(*s2).GetData())[i]
-	//}
+	for i := 0; i < len(*s.Data); i++ {
+		(*s.Data)[i] += (*(*s2).GetData())[i]
+	}
 
 	return nil
 }

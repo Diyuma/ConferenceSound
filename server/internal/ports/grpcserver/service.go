@@ -12,10 +12,10 @@ func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService
 	uId := s.GenUserId() // no need to gen there - it is bug
 	cId := in.ConfId
 	ctx, cancel := context.WithCancelCause(context.Background())
-	//soundStream := s.SendSoundDataStream(ctx, cancel, uId, cId)
+	soundStream := s.SendSoundDataStream(ctx, cancel, uId, cId)
 	_ = s.SendSoundDataStream(ctx, cancel, uId, cId)
 	for {
-		/*select {
+		select {
 		case m := <-soundStream:
 			s.logger.Info("Send sound data to client: ",
 				zap.Int64("rate", m.GetRate()),
@@ -30,7 +30,7 @@ func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService
 
 			ctx, cancel = context.WithCancelCause(context.Background())
 			soundStream = s.SendSoundDataStream(ctx, cancel, uId, cId)
-		}*/
+		}
 	}
 
 	return nil
