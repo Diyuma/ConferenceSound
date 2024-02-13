@@ -7,6 +7,8 @@ import (
 	"context"
 	"math/rand"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // we choose sound impelemtation in that file
@@ -28,6 +30,10 @@ func (s *server) SendSoundDataStream(ctx context.Context, cancel context.CancelC
 					s.logger.Error(err.Error())
 					cancel(err)
 					return
+				}
+
+				if sound == nil || *sound == nil {
+					s.logger.Warn("Tried to send nil sound data to client", zap.Uint32("userId", userId), zap.Uint64("confId", confId))
 				}
 
 				stream <- &proto.ChatServerMessage{Data: *(*sound).GetData(), Rate: int64((*sound).GetBitRate()), SoundId: sId}

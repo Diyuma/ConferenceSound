@@ -44,8 +44,8 @@ func (a *App) getSoundBySoundId(soundId uint64, userId uint32, confId uint64) (*
 		return nil, 0, err
 	}
 
-	if ok, timeSend := (*s).AmIAuthor(userId); ok {
-		return nil, timeSend, nil
+	if ok, timeSend := (*s).AmIAuthor(userId); ok { // TODO I think that it is correct to send s , not nill there - check it
+		return s, timeSend, nil
 	}
 
 	return s, 0, nil
