@@ -1,4 +1,4 @@
-module homework
+module conference
 
 go 1.21.5
 

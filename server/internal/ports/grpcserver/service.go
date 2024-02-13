@@ -3,17 +3,18 @@ package grpcserver
 import (
 	"context"
 
-	"homework/server/internal/ports/grpcserver/proto"
+	"conference/server/internal/ports/grpcserver/proto"
 
 	"go.uber.org/zap"
 )
 
 func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService_GetSoundServer) error {
-	uId := s.GenUserId() // no need to gen there - it is bug
+	//uId := s.GenUserId() // no need to gen there - it is bug
+	uId := uint32(in.UserId)
 	cId := in.ConfId
 	ctx, cancel := context.WithCancelCause(context.Background())
 	soundStream := s.SendSoundDataStream(ctx, cancel, uId, cId)
-	_ = s.SendSoundDataStream(ctx, cancel, uId, cId)
+	//_ = s.SendSoundDataStream(ctx, cancel, uId, cId)?????????????????????? why i need it
 	for {
 		select {
 		case m := <-soundStream:
@@ -27,9 +28,10 @@ func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService
 			}
 		case <-ctx.Done():
 			s.logger.Warn("Ctx to send data cancelled: ", zap.Error(ctx.Err()))
+			return nil
 
-			ctx, cancel = context.WithCancelCause(context.Background())
-			soundStream = s.SendSoundDataStream(ctx, cancel, uId, cId)
+			//ctx, cancel = context.WithCancelCause(context.Background())
+			//soundStream = s.SendSoundDataStream(ctx, cancel, uId, cId)?????????????????????? why i need it
 		}
 	}
 

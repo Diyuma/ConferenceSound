@@ -1,30 +1,32 @@
 package app
 
 import (
+	"conference/server/internal/sound"
 	"errors"
 	"fmt"
-	"homework/server/internal/sound"
 	"time"
 
 	"go.uber.org/zap"
 )
 
 type App struct {
-	repo        sound.Repository
-	sound       sound.Sound // to have ability to create sound instanses
-	lastSoundId map[uint32]uint64
-	logger      *zap.Logger
+	repo   sound.Repository
+	sound  sound.Sound // to have ability to create sound instanses
+	logger *zap.Logger
 }
 
 var ErrorNoSuchUserIdFound error = errors.New("can't get last sound id to that user because no such user id found")
+var ErrorNoSuchSoundIdFound error = errors.New("can't get sound because no such sound id found")
 var ErrorIncorrectSoundDuration error = errors.New("incorrect sound duration - not dividable by sound grain duration")
 var ErrorExpectedSoundGrainDuration error = errors.New("expected sound duration equal to sound grain duration")
-var ErrorExpectedNonNillSound error = errors.New("expected to work with real object, not nill")
+var ErrorExpectedNonNillObject error = errors.New("expected to work with real object, not nill")
+var ErrorNextSoundIsNotReadyYet error = errors.New("requested sound id to send may be counting on server right now")
 
 const SoundGrainDuration = 256 // in ms
+const TimeToSaveSound = 2047   // in ms
 
 func NewApp(repo sound.Repository, sound sound.Sound, logger *zap.Logger) App {
-	return App{repo: repo, sound: sound, lastSoundId: make(map[uint32]uint64), logger: logger}
+	return App{repo: repo, sound: sound, logger: logger}
 }
 
 // removed cause I want to have ability to change sound interface implementations
@@ -33,7 +35,10 @@ func NewApp(repo sound.Repository, sound sound.Sound, logger *zap.Logger) App {
 }*/
 
 func (a *App) getSoundBySoundId(soundId uint64, userId uint32, confId uint64) (*sound.Sound, uint64, error) {
-	s, err := a.repo.GetSound(fmt.Sprintf("%d:%d", soundId, confId))
+	ok, s, err := a.repo.GetSound(fmt.Sprintf("%d:%d", soundId, confId))
+	if !ok && err == nil {
+		return nil, 0, ErrorNoSuchSoundIdFound
+	}
 	a.logger.Info("getSoundBySoundId", zap.Any("sound", s))
 	if err != nil {
 		return nil, 0, err
@@ -46,21 +51,48 @@ func (a *App) getSoundBySoundId(soundId uint64, userId uint32, confId uint64) (*
 	return s, 0, nil
 }
 
-func (a *App) GetSoundAvaliableTicker() *time.Ticker { // TODO change time to safe zone and non-safe and work in that way
+func (a *App) GetSoundAvaliableTicker() *time.Ticker {
 	return time.NewTicker(time.Millisecond * SoundGrainDuration)
 }
 
-func (a *App) getLastSoundId(userId uint32) (uint64, error) { // it's bad to use locally (may be) - need to care after retrying connections
+/*func (a *App) getLastSoundId(userId uint32) (uint64, error) { // it's bad to use locally (may be) - need to care after retrying connections
 	id, ok := a.lastSoundId[userId]
 	if !ok {
+		a.lastSoundId[userId] = genNextAvaliableSoundId(uint64(time.Now().UnixMilli())) // TODO fix time counting lots of times
 		return 0, ErrorNoSuchUserIdFound
 	}
 
+	a.lastSoundId[userId] += 1
+
 	return id, nil
+}*/
+
+func genNextAvaliableSoundIdToRead(now uint64) uint64 { // TODO change type of sound id to smth less ; it is dagnerous idea because what if server get 2 in a row form 1 user
+	return now / SoundGrainDuration
 }
 
-func genNextAvaliableSoundId(now uint64) uint64 { // divide every 100 ms
-	return (now + 99) % SoundGrainDuration
+func genNextAvaliableSoundIdToWrite(now uint64, mId uint32) uint64 { // TODO change type of sound id to smth less ; it is dagnerous idea because what if server get 2 in a row form 1 user
+	return now/SoundGrainDuration + 2 + uint64(mId)
+}
+
+/*func isSoundIdReadyToSend(now uint64, sId uint64) bool {
+	return genNextAvaliableSoundIdToWrite(now) > sId+2
+}*/
+
+func isSoundIdTooOldToRead(now uint64, sId uint64) (uint64, bool) {
+	lSId := genNextAvaliableSoundIdToRead(now)
+	if lSId > sId+TimeToSaveSound/SoundGrainDuration {
+		return lSId, true
+	}
+	return 0, false
+}
+
+func isSoundIdTooOldToWrite(now uint64, sId uint64, mId uint32) (uint64, bool) {
+	lSId := genNextAvaliableSoundIdToRead(now)
+	if lSId+1 > sId {
+		return lSId + uint64(mId), true
+	}
+	return 0, false
 }
 
 // ! SoundGrainDuration % genSoundDuration(...) == 0
@@ -72,10 +104,13 @@ func (a *App) GenSoundBitRate(userId uint32, confId uint64) int { // TODO add lo
 	return (1 << 13)
 }
 
-func (a *App) GetNextSoundByUserId(userId uint32, confId uint64) (*sound.Sound, []uint64, error) { // TODO check what is better to use
+/*func (a *App) GetNextSoundByUserId(userId uint32, confId uint64) (*sound.Sound, []uint64, error) { // TODO check what is better to use
 	lastSoundId, err := a.getLastSoundId(userId)
 	if err != nil {
 		return nil, nil, err
+	}
+	if !isSoundIdReadyToSend(uint64(time.Now().UnixMilli()), lastSoundId) {
+		return nil, nil, ErrorNextSoundIsNotReadyYet
 	}
 
 	duration := genSoundDuration(userId, confId)
@@ -95,18 +130,28 @@ func (a *App) GetNextSoundByUserId(userId uint32, confId uint64) (*sound.Sound, 
 	}
 
 	return &s, timesSend, nil
-}
+}*/
 
-func (a *App) GetNextSoundGrainByUserId(userId uint32, confId uint64) (*sound.Sound, uint64, error) {
-	lastSoundId, err := a.getLastSoundId(userId)
+func (a *App) GetNextSoundGrainByUserId(uId uint32, cId uint64, lSId *uint64) (*sound.Sound, uint64, error) {
+	a.logger.Info("GetNextGrainSound", zap.Uint32("userId", uId), zap.Uint64("confId", cId))
+	if id, ok := isSoundIdTooOldToRead(uint64(time.Now().UnixMilli()), *lSId); ok {
+		(*lSId) = id
+	}
+	defer func() { (*lSId)++ }()
+	/*lastSoundId, err := a.getLastSoundId(userId)
 	if err != nil {
 		return nil, 0, err
+	}*/
+	s, sId, err := a.getSoundBySoundId(*lSId, uId, cId)
+	if err == ErrorNoSuchSoundIdFound {
+		a.logger.Warn("No such sound id found", zap.Uint32("userId", uId), zap.Uint64("confId", cId), zap.Uint64("soundId", *lSId))
+		return nil, 0, ErrorNextSoundIsNotReadyYet
 	}
-	return a.getSoundBySoundId(genNextAvaliableSoundId(lastSoundId), userId, confId)
+	return s, sId, err
 }
 
 // It may be slow to work with error during not getting sound - may be ok will be better
-func (a *App) SetSound(s sound.Sound, userId uint32, confId uint64) ([]uint64, error) { // deprecated
+/*func (a *App) SetSound(s sound.Sound, userId uint32, confId uint64) ([]uint64, error) { // deprecated
 	if s.GetSoundDuration()%SoundGrainDuration != 0 {
 		return nil, ErrorIncorrectSoundDuration
 	}
@@ -138,14 +183,14 @@ func (a *App) SetSound(s sound.Sound, userId uint32, confId uint64) ([]uint64, e
 	}
 
 	return soundIds, nil
-}
+}*/
 
 // It may be slow to work with error during not getting sound - may be ok will be better
 // what will happen if 2 goroutines will run this func in same time (to sound arr)
-func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64) (uint64, error) {
+func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64, tS uint64, mId uint32) (uint64, error) {
 	if s == nil {
-		a.logger.Warn(ErrorExpectedNonNillSound.Error(), zap.Uint32("userId", userId), zap.Uint64("confId", confId))
-		return 0, ErrorExpectedNonNillSound
+		a.logger.Warn(ErrorExpectedNonNillObject.Error(), zap.Uint32("userId", userId), zap.Uint64("confId", confId))
+		return 0, ErrorExpectedNonNillObject
 	}
 
 	a.logger.Info("SetGrainSound", zap.Int("duration", s.GetSoundDuration()), zap.Int("bitRate", s.GetBitRate()), zap.Int("dataLen", int(len(*s.GetData()))),
@@ -156,11 +201,14 @@ func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64) (uint64
 		return 0, ErrorExpectedSoundGrainDuration
 	}
 
-	soundId := genNextAvaliableSoundId(uint64(time.Now().UnixMilli()))
+	sId := genNextAvaliableSoundIdToWrite(tS, mId)
+	if id, ok := isSoundIdTooOldToWrite(uint64(time.Now().UnixMilli()), sId, mId); ok {
+		sId = id
+	}
 
-	s.SetTimeId(soundId)
+	s.SetTimeId(sId)
 
-	key := fmt.Sprintf("%d:%d", soundId, confId)
+	key := fmt.Sprintf("%d:%d", sId, confId)
 	ok, sNow, err := a.repo.GetDelSound(key)
 	if err != nil {
 		a.logger.Warn("Tried to get current sound from repo, got error", zap.Error(err))
@@ -182,7 +230,7 @@ func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64) (uint64
 		return 0, err
 	}
 
-	return soundId, nil
+	return sId, nil
 }
 
 func genTimeExpiration() time.Duration {

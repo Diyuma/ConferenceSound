@@ -1,12 +1,13 @@
 package main
 
 import (
+	"conference/server/internal/app"
+	"conference/server/internal/ports/grpcserver"
+	"conference/server/internal/sound/soundwav"
+	"conference/server/internal/soundadapters/reporedis"
+	"conference/server/internal/userInfo/infoRepoRedis"
 	"context"
 	"flag"
-	"homework/server/internal/app"
-	"homework/server/internal/ports/grpcserver"
-	"homework/server/internal/sound/soundwav"
-	"homework/server/internal/soundadapters/reporedis"
 
 	"log"
 
@@ -20,7 +21,7 @@ type ServerLoggers struct {
 
 // TODO: move sound interface choosing there
 // TODO: add app logger (now server logger and app logger are merged)
-func RunServer(addr string, repoaddr string, slg ServerLoggers, opts ...grpcserver.ServerOption) {
+func RunServer(addr string, sRepoAddr string, uInfRepoAddr string, slg ServerLoggers, opts ...grpcserver.ServerOption) {
 	var err error
 
 	if slg.ServerLogger == nil {
@@ -39,7 +40,7 @@ func RunServer(addr string, repoaddr string, slg ServerLoggers, opts ...grpcserv
 		defer slg.RepoLogger.Sync()
 	}
 
-	lis, s := grpcserver.NewServer(app.NewApp(reporedis.NewRepo(context.Background(), repoaddr, slg.RepoLogger), soundwav.NewEmptySound(), slg.ServerLogger), slg.ServerLogger, addr, opts...)
+	lis, s := grpcserver.NewServer(app.NewApp(reporedis.NewRepo(context.Background(), sRepoAddr, slg.RepoLogger), soundwav.NewEmptySound(), slg.ServerLogger), infoRepoRedis.NewRepo(context.Background(), uInfRepoAddr, slg.RepoLogger), slg.ServerLogger, addr, opts...)
 
 	slg.ServerLogger.Info("Server is listenning", zap.String("addr", addr))
 	if err := s.Serve(lis); err != nil {
@@ -49,12 +50,13 @@ func RunServer(addr string, repoaddr string, slg ServerLoggers, opts ...grpcserv
 
 func main() {
 	var serverAddr = flag.String("serveraddr", ":9090", "Server listening address")
-	var redisAddr = flag.String("redisaddr", ":8088", "Redis listening address")
+	var sRedisAddr = flag.String("sredisaddr", ":8088", "Redis for sound listening address")
+	var uInfRedisAddr = flag.String("uinfredisaddr", ":8089", "Redis for user info listening address")
 	flag.Parse()
 
-	if serverAddr == nil || redisAddr == nil {
+	if serverAddr == nil || sRedisAddr == nil || uInfRedisAddr == nil {
 		log.Fatal("Can't parse server address or repoaddress from flags")
 	}
 
-	RunServer(*serverAddr, *redisAddr, ServerLoggers{})
+	RunServer(*serverAddr, *sRedisAddr, *uInfRedisAddr, ServerLoggers{})
 }

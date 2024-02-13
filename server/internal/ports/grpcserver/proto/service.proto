@@ -25,6 +25,8 @@ message ChatClientMessage {
     int64 rate = 2;
     uint32 userId = 6;
     uint64 confId = 7;
+    uint64 timeStamp = 8;
+    uint32 messageInd = 9;
 
     reserved 1;
     reserved 3; 

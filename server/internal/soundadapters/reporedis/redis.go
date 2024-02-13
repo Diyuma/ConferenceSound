@@ -2,9 +2,10 @@ package reporedis
 
 import (
 	"bytes"
+	"conference/server/internal/sound"
+	"conference/server/internal/sound/soundwav"
 	"context"
 	"encoding/gob"
-	"homework/server/internal/sound"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -33,7 +34,8 @@ func NewRepo(ctx context.Context, addr string, lr *zap.Logger) *RepositoryRedis 
 func (repo *RepositoryRedis) SetSound(k string, v *sound.Sound, tExp time.Duration) error {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	if err := enc.Encode(*v); err != nil {
+	if err := enc.Encode(*(*v).(*soundwav.SoundWav)); err != nil {
+		repo.logger.Error("Error occured during writing sound to redis", zap.String("key", k))
 		return err
 	}
 
@@ -41,21 +43,29 @@ func (repo *RepositoryRedis) SetSound(k string, v *sound.Sound, tExp time.Durati
 }
 
 // TODO Check for redis.nil error
-func (repo *RepositoryRedis) GetSound(k string) (*sound.Sound, error) {
+// TODO check if I really need such conversations between interface and it's impl
+func (repo *RepositoryRedis) GetSound(k string) (bool, *sound.Sound, error) {
 	res, err := repo.client.Get(repo.ctx, k).Bytes()
+	repo.logger.Info("GetSound", zap.String("key", k), zap.Error(err))
+	if err == redis.Nil {
+		return false, nil, nil
+	}
 	if err != nil {
-		return nil, err
+		repo.logger.Error("Error occured during reading sound from redis", zap.String("key", k))
+		return false, nil, err
 	}
 
 	var buf *bytes.Buffer = bytes.NewBuffer(res)
 	enc := gob.NewDecoder(buf)
 
-	var sw sound.Sound
-	if err := enc.Decode(sw); err != nil || sw == nil {
-		return nil, err
+	var sw soundwav.SoundWav
+	repo.logger.Info("GetSound", zap.String("key", k), zap.Error(err))
+	if err := enc.Decode(&sw); err != nil {
+		return false, nil, err
 	}
 
-	return &sw, nil
+	s := sound.Sound(&sw)
+	return true, &s, nil
 }
 
 func (repo *RepositoryRedis) GetDelSound(k string) (bool, *sound.Sound, error) {
@@ -64,27 +74,19 @@ func (repo *RepositoryRedis) GetDelSound(k string) (bool, *sound.Sound, error) {
 		return false, nil, nil
 	}
 	if err != nil {
+		repo.logger.Error("Error occured during reading sound from redis", zap.String("key", k))
 		return false, nil, err
 	}
 
 	var buf *bytes.Buffer = bytes.NewBuffer(res)
 	enc := gob.NewDecoder(buf)
 
-	var sw sound.Sound
-	if err := enc.Decode(sw); err != nil || sw == nil {
+	var sw soundwav.SoundWav
+	repo.logger.Info("GetSound", zap.String("key", k), zap.Error(err))
+	if err := enc.Decode(&sw); err != nil {
 		return false, nil, err
 	}
 
-	return true, &sw, nil
+	s := sound.Sound(&sw)
+	return true, &s, nil
 }
-
-/*func (repo *RepositoryRedis) Add(k int, sw sound.Sound, tExp time.Duration) error {
-	swNow, err := repo.getDelSound(k) // Am I really need to del there because of small expiration time
-	if err != nil {
-		return err
-	}
-
-	swNow.Add(sw)
-
-	return repo.SetSound(k, swNow, tExp)
-}*/

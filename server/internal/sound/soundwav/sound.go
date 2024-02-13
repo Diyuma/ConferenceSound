@@ -1,9 +1,9 @@
 package soundwav
 
 import (
+	"conference/server/internal/sound"
 	"errors"
 	"fmt"
-	"homework/server/internal/sound"
 )
 
 type SoundWav struct { // all fieldS are public because we have to translate it to redis
