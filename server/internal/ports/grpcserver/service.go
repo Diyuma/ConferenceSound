@@ -3,7 +3,7 @@ package grpcserver
 import (
 	"context"
 
-	"conference/server/internal/ports/grpcserver/proto"
+	"conference/internal/ports/grpcserver/proto"
 
 	"go.uber.org/zap"
 )
@@ -48,7 +48,9 @@ func (s *server) SendSound(ctx context.Context, in *proto.ChatClientMessage) (ou
 	s.logger.Info("Got sound data:",
 		zap.Int64("rate", in.GetRate()),
 		zap.Uint32("userId", in.GetUserId()),
-		zap.Uint64("confId", in.GetConfId()))
+		zap.Uint64("confId", in.GetConfId()),
+		zap.Uint32("messageId", in.GetMessageInd()),
+		zap.Uint64("timeStamp", in.GetTimeStamp()))
 
 	if s == nil {
 		s.logger.Error("s is nil")

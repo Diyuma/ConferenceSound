@@ -2,8 +2,8 @@ package reporedis
 
 import (
 	"bytes"
-	"conference/server/internal/sound"
-	"conference/server/internal/sound/soundwav"
+	"conference/internal/sound"
+	"conference/internal/sound/soundwav"
 	"context"
 	"encoding/gob"
 	"time"

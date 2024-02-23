@@ -1,7 +1,7 @@
 package soundwav
 
 import (
-	"conference/server/internal/sound"
+	"conference/internal/sound"
 	"errors"
 	"fmt"
 )

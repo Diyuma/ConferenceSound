@@ -1,9 +1,9 @@
 package grpcserver
 
 import (
-	"conference/server/internal/app"
-	"conference/server/internal/ports/grpcserver/proto"
-	"conference/server/internal/userInfo"
+	"conference/internal/app"
+	"conference/internal/ports/grpcserver/proto"
+	"conference/internal/userInfo"
 	"log"
 	"net"
 

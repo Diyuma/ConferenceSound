@@ -1,8 +1,8 @@
 package reporedis
 
 import (
-	"conference/server/internal/sound"
-	"conference/server/internal/sound/soundwav"
+	"conference/internal/sound"
+	"conference/internal/sound/soundwav"
 	"context"
 	"log"
 	"testing"

@@ -1,11 +1,11 @@
 package main
 
 import (
-	"conference/server/internal/app"
-	"conference/server/internal/ports/grpcserver"
-	"conference/server/internal/sound/soundwav"
-	"conference/server/internal/soundadapters/reporedis"
-	"conference/server/internal/userInfo/infoRepoRedis"
+	"conference/internal/app"
+	"conference/internal/ports/grpcserver"
+	"conference/internal/sound/soundwav"
+	"conference/internal/soundadapters/reporedis"
+	"conference/internal/userInfo/infoRepoRedis"
 	"context"
 	"flag"
 

@@ -1,7 +1,7 @@
 package app
 
 import (
-	"conference/server/internal/sound"
+	"conference/internal/sound"
 	"errors"
 	"fmt"
 	"time"
@@ -39,7 +39,7 @@ func (a *App) getSoundBySoundId(soundId uint64, userId uint32, confId uint64) (*
 	if !ok && err == nil {
 		return nil, 0, ErrorNoSuchSoundIdFound
 	}
-	a.logger.Info("getSoundBySoundId", zap.Any("sound", s))
+	a.logger.Info("getSoundBySoundId", zap.Int("soundDuration", (*s).GetSoundDuration()), zap.Int("bitrate", (*s).GetBitRate()), zap.Any("sound", (*s).GetAuthors()), zap.Any("timeIds", (*s).GetTimeId()))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -188,13 +188,14 @@ func (a *App) GetNextSoundGrainByUserId(uId uint32, cId uint64, lSId *uint64) (*
 // It may be slow to work with error during not getting sound - may be ok will be better
 // what will happen if 2 goroutines will run this func in same time (to sound arr)
 func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64, tS uint64, mId uint32) (uint64, error) {
+	a.logger.Info("CHECK TIME", zap.Int64("server", time.Now().UnixMilli()), zap.Uint64("client", tS))
 	if s == nil {
 		a.logger.Warn(ErrorExpectedNonNillObject.Error(), zap.Uint32("userId", userId), zap.Uint64("confId", confId))
 		return 0, ErrorExpectedNonNillObject
 	}
 
 	a.logger.Info("SetGrainSound", zap.Int("duration", s.GetSoundDuration()), zap.Int("bitRate", s.GetBitRate()), zap.Int("dataLen", int(len(*s.GetData()))),
-		zap.Uint32("userId", userId), zap.Uint64("confId", confId))
+		zap.Uint32("userId", userId), zap.Uint64("confId", confId), zap.Uint64("timestamp", tS), zap.Uint32("messageId", mId))
 
 	if s.GetSoundDuration() != SoundGrainDuration {
 		a.logger.Warn("Unexpected sound duration")

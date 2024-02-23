@@ -1,9 +1,9 @@
 package grpcserver
 
 import (
-	"conference/server/internal/app"
-	"conference/server/internal/ports/grpcserver/proto"
-	"conference/server/internal/sound/soundwav"
+	"conference/internal/app"
+	"conference/internal/ports/grpcserver/proto"
+	"conference/internal/sound/soundwav"
 	"context"
 	"math/rand"
 	"time"
