@@ -22,7 +22,7 @@ jobs:
     - name: Build
       run: go build -v ./...
 
-    - name: Test
+    #- name: Test
       #run: go test -v ./...
 
     - name: uploading to server
