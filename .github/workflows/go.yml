@@ -1,6 +1,3 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
 name: Go
 
 on:
@@ -49,7 +46,7 @@ jobs:
           SOURCE: "soundServer/"
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: "/home/lehatr/conference/conference/"
+          TARGET: "~/conference/"
 
           SCRIPT_BEFORE: |
               ls
@@ -69,9 +66,9 @@ jobs:
          username: ${{ secrets.USERNAME }}
          key: ${{ secrets.KEY }}
          script: |
-            sudo mv /home/lehatr/conference/conference/soundServer/nginx.conf /home/lehatr/conference/docker-nginx/nginx.conf
-            sudo docker build "/home/lehatr/conference/conference/soundServer/server" --tag lehatr/conferencesoundserver
-            sudo docker build "/home/lehatr/conference/conference/soundServer/restServer" --tag lehatr/conferencerestserver
+            sudo mv "~/conference/soundServer/nginx.conf" "~/docker-nginx/nginx.conf"
+            sudo docker build "~/conference/soundServer/server" --tag lehatr/conferencesoundserver
+            sudo docker build "~/conference/soundServer/restServer" --tag lehatr/conferencerestserver
     - name: run on server
       uses: appleboy/ssh-action@v1.0.3
       with:
