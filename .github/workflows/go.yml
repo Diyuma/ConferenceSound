@@ -2,7 +2,7 @@ name: Go
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "lehatrutenb-test-1" ]
 
 jobs:
   build:
