@@ -14,13 +14,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21.5'
+    # - name: Set up Go
+    #   uses: actions/setup-go@v4
+    #   with:
+    #     go-version: '1.21.5'
 
-    - name: Build
-      run: go build -v ./server/...
+    # - name: Build
+    #   run: go build -v ./server/...
 
     #- name: Test
       #run: go test -v ./server/...
@@ -33,6 +33,14 @@ jobs:
          key: ${{ secrets.KEY }}
          script: whoami
 
+    - name: Move files to send
+      run: |
+          mkdir -p soundServer
+          cp -r ./server soundServer/server
+          cp -r ./restServer soundServer/restServer
+          cp Makefile ./envoy-override.yaml soundServer
+          cp ./nginx.conf soundServer
+
     - uses: actions/checkout@v3
     - name: Install Node.js
       uses: actions/setup-node@v3
@@ -42,39 +50,32 @@ jobs:
       #run: npm install
    # - name: Run build task
       #run: npm run build --if-present
-    - name: Deploy 
+    - name: Upload Files 
       uses: easingthemes/ssh-deploy@main
       with:
           SSH_PRIVATE_KEY: ${{ secrets.KEY }}
           SOURCE: "soundServer/"
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: "~/conference/"
-
-          SCRIPT_BEFORE: |
-              ls
-              mkdir -p soundServer
-              cp -r ./server soundServer/server
-              cp -r ./restServer soundServer/restServer
-              cp Makefile ./envoy-override.yaml soundServer
-              cp ./nginx.conf soundServer
-          SCRIPT_AFTER: |
-              rm -rf soundServer
+          TARGET: "~/conference/soundServer/"
+          SCRIPT_AFTER: mv ~/conference/soundServer/nginx.conf ~/docker-nginx/nginx.conf
     
+    - name: rm created folder to send
+      run: |
+          rm -rf soundServer
 
-    - name: move nginx to it's expected place & build dockers
+    - name: Build dockers on server
       uses: appleboy/ssh-action@v1.0.3
       with:
          host: ${{ secrets.HOST }}
          username: ${{ secrets.USERNAME }}
          key: ${{ secrets.KEY }}
          script: |
-            sudo mv ~/conference/soundServer/nginx.conf ~/docker-nginx/nginx.conf
             sudo docker build "~/conference/soundServer/server" --tag lehatr/conferencesoundserver
             sudo docker build "~/conference/soundServer/restServer" --tag lehatr/conferencerestserver
 
 
-    - name: run on server
+    - name: Run on server
       uses: appleboy/ssh-action@v1.0.3
       with:
          host: ${{ secrets.HOST }}
