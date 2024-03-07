@@ -42,6 +42,10 @@ jobs:
           cp ./nginx.conf soundServer
           ls
 
+    - name: check
+      run: |
+        pwd 
+        ls
     - uses: actions/checkout@v3
     - name: check
       run: |
