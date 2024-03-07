@@ -58,8 +58,8 @@ jobs:
           SOURCE: "soundServer/"
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: "/home/lehatr/conference/conference/soundServer/"
-          SCRIPT_AFTER: mv /home/lehatr/conference/conference/soundServer/nginx.conf /home/lehatr/conference/docker-nginx/nginx.conf
+          TARGET: "/home/lehatr/conference/conference/"
+          #SCRIPT_AFTER: mv /home/lehatr/conference/conference/soundServer/nginx.conf /home/lehatr/conference/docker-nginx/nginx.conf
     
     - name: rm created folder to send
       run: |
