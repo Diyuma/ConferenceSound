@@ -49,7 +49,7 @@ jobs:
           SOURCE: "soundServer/"
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ${{ ~/conference/ }}
+          TARGET: ${{ "~/conference/" }}
 
           SCRIPT_BEFORE: |
               mkdir -p soundServer
