@@ -33,4 +33,78 @@ jobs:
          key: ${{ secrets.KEY }}
          script: whoami
 
+    - uses: actions/checkout@v3
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16.x'
+    - name: Install npm dependencies
+      run: npm install
+    - name: Run build task
+      run: npm run build --if-present
+    - name: Deploy 
+      uses: easingthemes/ssh-deploy@main
+      with:
+          SSH_PRIVATE_KEY: ${{ secrets.KEY }}
+          SOURCE: "soundServer/"
+          REMOTE_HOST: ${{ secrets.HOST }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          TARGET: ${{ ~/conference/ }}
+
+          SCRIPT_BEFORE: |
+              mkdir -p soundServer
+              cp -r server soundServer/server
+              cp -r restServer soundServer/restServer
+              cp Makefile envoy-override.yaml soundServer
+              cp nginx.conf soundServer
+          SCRIPT_AFTER: |
+              rm -rf soundServer
     
+
+    - name: move nginx to it's expected place & build dockers
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+         host: ${{ secrets.HOST }}
+         username: ${{ secrets.USERNAME }}
+         key: ${{ secrets.KEY }}
+         script: |
+            sudo mv ~/conference/soundServer/nginx.conf ~/docker-nginx/nginx.conf
+            sudo docker build "~/conference/soundServer/server" --tag lehatr/conferencesoundserver
+            sudo docker build "~/conference/soundServer/restServer" --tag lehatr/conferencerestserver
+
+
+    - name: run on server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+         host: ${{ secrets.HOST }}
+         username: ${{ secrets.USERNAME }}
+         key: ${{ secrets.KEY }}
+         script: |
+            sudo docker network rm -f conf_net
+            sudo docker network create --subnet=172.18.0.0/16 conf_net
+
+            sudo docker stop redisSound
+            sudo docker rm redisSound
+            sudo docker run --name redisSound --network conf_net --ip 172.18.0.5 -d redis
+
+
+            sudo docker stop Envoy
+            sudo docker rm Envoy
+
+            sudo docker run --name Envoy --network conf_net --publish 8085:8085 -d \
+                  -v /home/lehatr/conference/soundServer/envoy-override.yaml:/envoy-override.yaml \
+                  envoyproxy/envoy-dev:c11574972860a40de36acf3ab8d930273f5ece65 \
+                  -c /envoy-override.yaml
+
+            sudo docker stop soundServer
+            sudo docker rm soundServer
+            sudo docker run --name soundServer --network conf_net --ip 172.18.0.6 -d lehatr/conferencesoundserver
+
+            sudo docker stop frontFileServer
+            sudo docker rm frontFileServer
+            sudo docker run --name frontFileServer --publish 8086:8086 -d lehatr/conferencerestserver
+
+            sudo docker stop docker-nginx
+            sudo docker rm docker-nginx
+            sudo docker run --name docker-nginx -p 443:443 --network conf_net -d -v /home/lehatr/conference/html:/usr/share/nginx/html \
+                  -v /home/lehatr/docker-nginx/nginx.conf:/etc/nginx/conf.d/default.conf nginx
