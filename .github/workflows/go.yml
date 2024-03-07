@@ -14,13 +14,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    # - name: Set up Go
-    #   uses: actions/setup-go@v4
-    #   with:
-    #     go-version: '1.21.5'
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21.5'
 
-    # - name: Build
-    #   run: go build -v ./server/...
+    - name: Build
+      run: go build -v ./server/...
 
     #- name: Test
       #run: go test -v ./server/...
@@ -33,15 +33,6 @@ jobs:
          key: ${{ secrets.KEY }}
          script: whoami
 
-    - name: Move files to send
-      run: |
-          mkdir -p soundServer
-          cp -r ./server soundServer/server
-          cp -r ./restServer soundServer/restServer
-          cp Makefile ./envoy-override.yaml soundServer
-          cp ./nginx.conf soundServer
-          ls
-
     - uses: actions/checkout@v3
     - name: Install Node.js
       uses: actions/setup-node@v3
@@ -51,36 +42,37 @@ jobs:
       #run: npm install
    # - name: Run build task
       #run: npm run build --if-present
-    - name: check
-      run: |
-        pwd 
-        ls
-    - name: Upload Files
+    - name: Deploy 
       uses: easingthemes/ssh-deploy@main
       with:
           SSH_PRIVATE_KEY: ${{ secrets.KEY }}
-          SOURCE: "soundServer"
+          SOURCE: "soundServer/"
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: "/home/lehatr/conference/"
-          #SCRIPT_AFTER: mv /home/lehatr/conference/conference/soundServer/nginx.conf /home/lehatr/conference/docker-nginx/nginx.conf
-    
-    - name: rm created folder to send
-      run: |
-          rm -rf soundServer
+          TARGET: "/home/lehatr/conference/conference/"
 
-    - name: Build dockers on server
+          SCRIPT_BEFORE: |
+              ls
+              mkdir -p soundServer
+              cp -r ./server soundServer/server
+              cp -r ./restServer soundServer/restServer
+              cp Makefile ./envoy-override.yaml soundServer
+              cp ./nginx.conf soundServer
+          SCRIPT_AFTER: |
+              rm -rf soundServer
+    
+
+    - name: move nginx to it's expected place & build dockers
       uses: appleboy/ssh-action@v1.0.3
       with:
          host: ${{ secrets.HOST }}
          username: ${{ secrets.USERNAME }}
          key: ${{ secrets.KEY }}
          script: |
+            sudo mv /home/lehatr/conference/conference/soundServer/nginx.conf /home/lehatr/conference/docker-nginx/nginx.conf
             sudo docker build "/home/lehatr/conference/conference/soundServer/server" --tag lehatr/conferencesoundserver
             sudo docker build "/home/lehatr/conference/conference/soundServer/restServer" --tag lehatr/conferencerestserver
-
-
-    - name: Run on server
+    - name: run on server
       uses: appleboy/ssh-action@v1.0.3
       with:
          host: ${{ secrets.HOST }}
@@ -89,28 +81,21 @@ jobs:
          script: |
             sudo docker network rm -f conf_net
             sudo docker network create --subnet=172.18.0.0/16 conf_net
-
             sudo docker stop redisSound
             sudo docker rm redisSound
             sudo docker run --name redisSound --network conf_net --ip 172.18.0.5 -d redis
-
-
             sudo docker stop Envoy
             sudo docker rm Envoy
-
             sudo docker run --name Envoy --network conf_net --publish 8085:8085 -d \
                   -v /home/lehatr/conference/soundServer/envoy-override.yaml:/envoy-override.yaml \
                   envoyproxy/envoy-dev:c11574972860a40de36acf3ab8d930273f5ece65 \
                   -c /envoy-override.yaml
-
             sudo docker stop soundServer
             sudo docker rm soundServer
             sudo docker run --name soundServer --network conf_net --ip 172.18.0.6 -d lehatr/conferencesoundserver
-
             sudo docker stop frontFileServer
             sudo docker rm frontFileServer
             sudo docker run --name frontFileServer --publish 8086:8086 -d lehatr/conferencerestserver
-
             sudo docker stop docker-nginx
             sudo docker rm docker-nginx
             sudo docker run --name docker-nginx -p 443:443 --network conf_net -d -v /home/lehatr/conference/html:/usr/share/nginx/html \
