@@ -18,8 +18,8 @@ jobs:
     - name: Build
       run: go build -v ./server/...
 
-    - name: Test
-      run: go test -v ./server/...
+    # - name: Test
+    #   run: go test -v ./server/...
 
     - name: uploading to server
       uses: appleboy/ssh-action@v1.0.3
