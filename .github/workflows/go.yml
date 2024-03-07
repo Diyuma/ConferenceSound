@@ -58,8 +58,8 @@ jobs:
           SOURCE: "soundServer/"
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: "~/conference/soundServer/"
-          SCRIPT_AFTER: mv ~/conference/soundServer/nginx.conf ~/docker-nginx/nginx.conf
+          TARGET: "/home/lehatr/conference/conference/soundServer/"
+          SCRIPT_AFTER: mv /home/lehatr/conference/conference/soundServer/nginx.conf /home/lehatr/conference/docker-nginx/nginx.conf
     
     - name: rm created folder to send
       run: |
@@ -72,8 +72,8 @@ jobs:
          username: ${{ secrets.USERNAME }}
          key: ${{ secrets.KEY }}
          script: |
-            sudo docker build "~/conference/soundServer/server" --tag lehatr/conferencesoundserver
-            sudo docker build "~/conference/soundServer/restServer" --tag lehatr/conferencerestserver
+            sudo docker build "/home/lehatr/conference/conference/soundServer/server" --tag lehatr/conferencesoundserver
+            sudo docker build "/home/lehatr/conference/conference/soundServer/restServer" --tag lehatr/conferencerestserver
 
 
     - name: Run on server
