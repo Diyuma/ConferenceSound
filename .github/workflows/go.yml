@@ -52,11 +52,12 @@ jobs:
           TARGET: "~/conference/"
 
           SCRIPT_BEFORE: |
+              ls
               mkdir -p soundServer
-              cp -r server soundServer/server
-              cp -r restServer soundServer/restServer
-              cp Makefile envoy-override.yaml soundServer
-              cp nginx.conf soundServer
+              cp -r ./server soundServer/server
+              cp -r ./restServer soundServer/restServer
+              cp Makefile ./envoy-override.yaml soundServer
+              cp ./nginx.conf soundServer
           SCRIPT_AFTER: |
               rm -rf soundServer
     
