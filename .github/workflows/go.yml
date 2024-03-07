@@ -65,8 +65,8 @@ jobs:
          username: ${{ secrets.USERNAME }}
          key: ${{ secrets.KEY }}
          script: |
-            sudo docker build "~/conference/soundServer/server" --tag lehatr/conferencesoundserver
-            sudo docker build "~/conference/soundServer/restServer" --tag lehatr/conferencerestserver
+            sudo docker build "/home/lehatr/conference/soundServer/server" --tag lehatr/conferencesoundserver
+            sudo docker build "/home/lehatr/conference/soundServer/restServer" --tag lehatr/conferencerestserver
 
 
     - name: Run on server
