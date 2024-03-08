@@ -25,7 +25,12 @@ func RunServer(addr string, sRepoAddr string, uInfRepoAddr string, slg ServerLog
 	var err error
 
 	if slg.ServerLogger == nil {
-		slg.ServerLogger, err = zap.NewProduction(zap.WithCaller(true))
+		cfg := zap.NewProductionConfig()
+		cfg.OutputPaths = []string{
+			"sound_loggs.log",
+			"stdout",
+		}
+		slg.ServerLogger, err = cfg.Build() // zap.NewProduction(zap.WithCaller(true))
 		if err != nil {
 			log.Fatalf("Failed to init logger: %v", err)
 		}
@@ -33,7 +38,12 @@ func RunServer(addr string, sRepoAddr string, uInfRepoAddr string, slg ServerLog
 	}
 
 	if slg.RepoLogger == nil {
-		slg.RepoLogger, err = zap.NewProduction(zap.WithCaller(true))
+		cfg := zap.NewProductionConfig()
+		cfg.OutputPaths = []string{
+			"repo_loggs.log",
+			"stdout",
+		}
+		slg.RepoLogger, err = cfg.Build() // zap.NewProduction(zap.WithCaller(true))
 		if err != nil {
 			log.Fatalf("Failed to init logger: %v", err)
 		}

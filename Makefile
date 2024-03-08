@@ -48,18 +48,12 @@ uploadToServer:
 	cp -r server soundServer/server
 	cp -r restServer soundServer/restServer
 
-	cp Makefile envoy-override.yaml enoy-https-http.yaml soundServer
+	cp Makefile envoy-override.yaml soundServer
 
-	scp -i ~/.ssh/yconference -r soundServer lehatr@178.154.202.56:~/conference/
+	scp -i ~/.ssh/yconference -r soundServer lehatr@178.154.202.56:~/conference
 
 	scp -i ~/.ssh/yconference nginx.conf lehatr@178.154.202.56:~/docker-nginx/nginx.conf
 
-	scp -i ~/.ssh/yconference main.js lehatr@178.154.202.56:~
-	scp -i ~/.ssh/yconference index.html lehatr@178.154.202.56:~
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo mv main.js "~/conference/html/conference/main.js"
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo mv index.html "~/conference/html/conference/index.html"
-
-	scp -i ~/.ssh/yconference -r default2.conf lehatr@178.154.202.56:~/docker-nginx/default.conf
 	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker build "~/conference/soundServer/server" --tag lehatr/conferencesoundserver
 	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker build "~/conference/soundServer/restServer" --tag lehatr/conferencerestserver
 	rm -rf soundServer
@@ -83,7 +77,8 @@ runOnServer:
 
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop soundServer
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm soundServer
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name soundServer --network conf_net --ip 172.18.0.6 -d lehatr/conferencesoundserver
+	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name soundServer --network conf_net --ip 172.18.0.6 -d \
+				lehatr/conferencesoundserver
 
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop frontFileServer
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm frontFileServer
@@ -91,11 +86,22 @@ runOnServer:
 
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop docker-nginx
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm docker-nginx
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name docker-nginx -p 443:443 --network conf_net -v ~/conference/html:/usr/share/nginx/html \
-				-v ~/docker-nginx/nginx.conf:/etc/nginx/conf.d/default.conf nginx
+	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name docker-nginx -p 443:443 --network conf_net -v /home/lehatr/conference/html:/usr/share/nginx/html \
+				-v /home/lehatr/docker-nginx/nginx.conf:/etc/nginx/conf.d/default.conf nginx
 
 connectToServer:
 	ssh -i ~/.ssh/yconference lehatr@178.154.202.56
+
+getLogsFromServer:
+	-rm -r logs
+	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo rm -r "~/conference/logs"
+	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 mkdir -p "~/conference/logs"
+
+	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker cp soundServer:/app/sound_loggs.log "~/conference/logs/sound_loggs.log"
+	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker cp soundServer:/app/repo_loggs.log "~/conference/logs/repo_loggs.log"
+	
+	scp -i ~/.ssh/yconference -r lehatr@178.154.202.56:~/conference/logs .
+	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo rm -r "~/conference/logs"
 
 ctDockerNetwork:
 	docker network create --subnet=172.18.0.0/16 conf_net

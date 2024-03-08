@@ -108,11 +108,13 @@ func (s *SoundWav) Add(s2 *sound.Sound) error {
 		return errors.New("s2.data is nil")
 	}
 
-	if len(*s.Data)*(*s2).GetBitRate() != len(*(*s2).GetData())*s.BitRate { // TODO Check for cotecteness
+	if len(*s.Data)*(*s2).GetBitRate() != len(*(*s2).GetData())*s.BitRate { // TODO Check for corecteness
 		return ErrorNotEqualSoundDuration
 	}
 
 	s.Authors = append(s.Authors, (*s2).GetAuthors()...)
+	s.TimeSend = append(s.TimeSend, (*s2).GetTimeId()...)
+
 	if (*s2).GetBitRate() != s.BitRate {
 		if err := (*s2).RebitSound(s.BitRate); err != nil { // change s2 bitrate to s bitrate
 			return err
@@ -157,6 +159,7 @@ func (s *SoundWav) Append(s2 *sound.Sound) {
 
 // partDuration in ms
 // make TimeSend empty array
+// deprecated
 func (s *SoundWav) DivideIntoParts(partDuration int) ([]sound.Sound, error) { // TODO bad work with pointers
 	if (s.Duration*s.BitRate)%partDuration != 0 {
 		return nil, ErrorIncorrectSoundDuration
@@ -172,7 +175,7 @@ func (s *SoundWav) DivideIntoParts(partDuration int) ([]sound.Sound, error) { //
 	return dividedSound, nil
 }
 
-func (s *SoundWav) AmIAuthor(userId uint32) (bool, uint64) { // return 0 if not, otherwise timeSend // !!!!!!!!!CHECK IN PROTO THAT NO ONE SEND TIME 0
+func (s *SoundWav) AmIAuthor(userId uint32) (bool, uint64) { // return 0 if not, otherwise timeSend // !!!!!!!!!CHECK IN PROTO THAT NO ONE SEND TIME 0 - but it is slower - maybe split into dev version and prod
 	for i, aId := range s.Authors {
 		if aId == userId {
 			return true, s.TimeSend[i]
