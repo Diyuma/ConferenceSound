@@ -21,9 +21,15 @@ static_resources:
                   - name: local_service
                     domains: ["*"]
                     routes:
-                      - match: { prefix: "/" }
+                      - match: { prefix: "/protoSound.SoundService" }
                         route:
-                          cluster: echo_service
+                          cluster: sound_service
+                          timeout: 0s
+                          max_stream_duration:
+                            grpc_timeout_header_max: 0s
+                      - match: { prefix: "/video_streaming.VideoService" }
+                        route:
+                          cluster: video_service
                           timeout: 0s
                           max_stream_duration:
                             grpc_timeout_header_max: 0s
@@ -45,7 +51,7 @@ static_resources:
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
-    - name: echo_service
+    - name: sound_service
       connect_timeout: 0.25s
       type: logical_dns
       http2_protocol_options: {}
@@ -58,4 +64,19 @@ static_resources:
                 address:
                   socket_address:
                     address: 172.18.0.6
+                    port_value: 9090
+    
+    - name: video_service
+      connect_timeout: 0.25s
+      type: logical_dns
+      http2_protocol_options: {}
+      lb_policy: round_robin
+      load_assignment:
+        cluster_name: cluster_1
+        endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: 172.18.0.7
                     port_value: 9090

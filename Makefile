@@ -86,7 +86,8 @@ runOnServer:
 
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop docker-nginx
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm docker-nginx
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name docker-nginx -p 443:443 --network conf_net -v /home/lehatr/conference/html:/usr/share/nginx/html \
+	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name docker-nginx -p 443:443 --network conf_net -d \
+				-v /home/lehatr/conference/html:/usr/share/nginx/html \
 				-v /home/lehatr/docker-nginx/nginx.conf:/etc/nginx/conf.d/default.conf nginx
 
 connectToServer:
