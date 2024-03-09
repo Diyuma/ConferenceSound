@@ -54,7 +54,6 @@ func (s *server) GenConfId() uint64 {
 	return rand.Uint64()
 }
 
-// проблема в том, что клиент отправляет много в ряд и сервер не успевает их расспеределить!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 func (s *server) AddSoundData(data *proto.ChatClientMessage) (*proto.ClientResponseMessage, error) {
 	if data == nil {
 		s.logger.Error("data is nil")
@@ -73,13 +72,13 @@ func (s *server) AddSoundData(data *proto.ChatClientMessage) (*proto.ClientRespo
 		return nil, err
 	}*/
 	tS, mId := data.TimeStamp, data.MessageInd
-	sId, err := s.app.SetGrainSound(soundwav.NewSound(&data.Data, int(data.Rate), len(data.Data)/int(data.Rate), []uint32{userId}, []uint64{}), userId, confId, tS, mId)
-	//sId, err := s.app.SetSound(soundwav.NewSound(&data.Data, int(data.Rate), len(data.Data)/int(data.Rate), []uint32{userId}, []uint64{}, s.logger), userId, confId)
+	tNow := uint64(time.Now().UnixMilli())
+	sId, err := s.app.SetGrainSound(soundwav.NewSound(&data.Data, int(data.Rate), len(data.Data)/int(data.Rate), []uint32{userId}, []uint64{}), userId, confId, tS, mId, tNow)
 	if err != nil {
 		return &proto.ClientResponseMessage{Rate: 0, SoundId: 0}, err
 	}
 
 	//s.uInf.SetId(fmt.Sprint(userId, ':', confId), lastSId)
 
-	return &proto.ClientResponseMessage{Rate: int64(s.app.GenSoundBitRate(userId, confId)), SoundId: sId}, nil
+	return &proto.ClientResponseMessage{Rate: int64(s.app.GenSoundBitRate(userId, confId, tNow, tS, uint64(mId), int(data.Rate))), SoundId: sId}, nil
 }

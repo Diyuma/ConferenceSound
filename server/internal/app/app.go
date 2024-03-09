@@ -23,16 +23,12 @@ var ErrorExpectedNonNillObject error = errors.New("expected to work with real ob
 var ErrorNextSoundIsNotReadyYet error = errors.New("requested sound id to send may be counting on server right now")
 
 const SoundGrainDuration = 256 // in ms
-const TimeToSaveSound = 2047   // in ms
+const MinimumBitRate = 4096
+const TimeToSaveSound = 2047 // in ms
 
 func NewApp(repo sound.Repository, sound sound.Sound, logger *zap.Logger) App {
 	return App{repo: repo, sound: sound, logger: logger}
 }
-
-// removed cause I want to have ability to change sound interface implementations
-/*func (a *App) NewSound(data *[]float32, bitRate int, duration int, authors []uint32, timeSend []uint64, logger *zap.Logger) sound.Sound {
-	return a.sound.NewSound(data, bitRate, duration, authors, timeSend, logger)
-}*/
 
 func (a *App) getSoundBySoundId(soundId uint64, userId uint32, confId uint64) (*sound.Sound, uint64, error) {
 	ok, s, err := a.repo.GetSound(fmt.Sprintf("%d:%d", soundId, confId))
@@ -55,18 +51,6 @@ func (a *App) GetSoundAvaliableTicker() *time.Ticker {
 	return time.NewTicker(time.Millisecond * SoundGrainDuration)
 }
 
-/*func (a *App) getLastSoundId(userId uint32) (uint64, error) { // it's bad to use locally (may be) - need to care after retrying connections
-	id, ok := a.lastSoundId[userId]
-	if !ok {
-		a.lastSoundId[userId] = genNextAvaliableSoundId(uint64(time.Now().UnixMilli())) // TODO fix time counting lots of times
-		return 0, ErrorNoSuchUserIdFound
-	}
-
-	a.lastSoundId[userId] += 1
-
-	return id, nil
-}*/
-
 func genNextAvaliableSoundIdToRead(now uint64) uint64 { // TODO change type of sound id to smth less ; it is dagnerous idea because what if server get 2 in a row form 1 user
 	return now / SoundGrainDuration
 }
@@ -74,10 +58,6 @@ func genNextAvaliableSoundIdToRead(now uint64) uint64 { // TODO change type of s
 func genNextAvaliableSoundIdToWrite(now uint64, mId uint32) uint64 { // TODO change type of sound id to smth less ; it is dagnerous idea because what if server get 2 in a row form 1 user
 	return now/SoundGrainDuration + 2 + uint64(mId)
 }
-
-/*func isSoundIdReadyToSend(now uint64, sId uint64) bool {
-	return genNextAvaliableSoundIdToWrite(now) > sId+2
-}*/
 
 func isSoundIdTooOldToRead(now uint64, sId uint64) (uint64, bool) {
 	lSId := genNextAvaliableSoundIdToRead(now)
@@ -89,7 +69,7 @@ func isSoundIdTooOldToRead(now uint64, sId uint64) (uint64, bool) {
 
 func isSoundIdTooOldToWrite(now uint64, sId uint64, mId uint32) (uint64, bool) {
 	lSId := genNextAvaliableSoundIdToRead(now)
-	if lSId+1 > sId {
+	if lSId+1 > sId { // TODO why mId not adding there???
 		return lSId + uint64(mId), true
 	}
 	return 0, false
@@ -100,37 +80,19 @@ func genSoundDuration(userId uint32, confId uint64) int { // TODO add logic ther
 	return SoundGrainDuration
 }
 
-func (a *App) GenSoundBitRate(userId uint32, confId uint64) int { // TODO add logic there
-	return (1 << 13)
+func (a *App) GenSoundBitRate(userId uint32, confId uint64, now uint64, tS uint64, mId uint64, cBr int) int { // TODO add logic there
+	return 4096 * 2 * 2
+	//return cBr
+	diff := now - tS
+	if diff < SoundGrainDuration/3 {
+		cBr *= 2
+	}
+	for diff >= SoundGrainDuration/2 && cBr > MinimumBitRate {
+		cBr /= 2
+		diff -= SoundGrainDuration / 2
+	}
+	return cBr
 }
-
-/*func (a *App) GetNextSoundByUserId(userId uint32, confId uint64) (*sound.Sound, []uint64, error) { // TODO check what is better to use
-	lastSoundId, err := a.getLastSoundId(userId)
-	if err != nil {
-		return nil, nil, err
-	}
-	if !isSoundIdReadyToSend(uint64(time.Now().UnixMilli()), lastSoundId) {
-		return nil, nil, ErrorNextSoundIsNotReadyYet
-	}
-
-	duration := genSoundDuration(userId, confId)
-	s := a.sound.NewEmptySound()
-	timesSend := make([]uint64, duration/SoundGrainDuration)
-
-	for i := 0; i < duration/SoundGrainDuration; i++ {
-		nextSoundId := genNextAvaliableSoundId(lastSoundId)
-		sNow, timeSend, err := a.getSoundBySoundId(nextSoundId, userId, confId)
-		if err != nil {
-			return nil, []uint64{}, err
-		}
-
-		lastSoundId = nextSoundId
-		timesSend[i] = timeSend
-		s.Append(sNow)
-	}
-
-	return &s, timesSend, nil
-}*/
 
 func (a *App) GetNextSoundGrainByUserId(uId uint32, cId uint64, lSId *uint64) (*sound.Sound, uint64, error) {
 	a.logger.Info("GetNextGrainSound", zap.Uint32("userId", uId), zap.Uint64("confId", cId))
@@ -151,44 +113,8 @@ func (a *App) GetNextSoundGrainByUserId(uId uint32, cId uint64, lSId *uint64) (*
 }
 
 // It may be slow to work with error during not getting sound - may be ok will be better
-/*func (a *App) SetSound(s sound.Sound, userId uint32, confId uint64) ([]uint64, error) { // deprecated
-	if s.GetSoundDuration()%SoundGrainDuration != 0 {
-		return nil, ErrorIncorrectSoundDuration
-	}
-
-	soundId := genNextAvaliableSoundId(uint64(time.Now().UnixMilli()))
-	soundIds := make([]uint64, s.GetSoundDuration()/SoundGrainDuration)
-
-	sounds, err := a.sound.DivideIntoParts(SoundGrainDuration)
-	if err != nil {
-		return nil, err
-	}
-
-	for i, sToAdd := range sounds {
-		soundIds[i] = soundId
-		sToAdd.SetTimeId(soundId)
-		key := fmt.Sprintf("%d:%d", soundId, confId)
-		_, sNow, err := a.repo.GetDelSound(key)
-		if err != nil {
-			return nil, err
-		}
-
-		(*sNow).Add(&sToAdd)
-
-		if err = a.repo.SetSound(key, sNow, genTimeExpiration()); err != nil {
-			return nil, err
-		}
-
-		soundId += SoundGrainDuration
-	}
-
-	return soundIds, nil
-}*/
-
-// It may be slow to work with error during not getting sound - may be ok will be better
 // what will happen if 2 goroutines will run this func in same time (to sound arr)
-func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64, tS uint64, mId uint32) (uint64, error) {
-	a.logger.Info("CHECK TIME", zap.Int64("server", time.Now().UnixMilli()), zap.Uint64("client", tS))
+func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64, tS uint64, mId uint32, tNow uint64) (uint64, error) {
 	if s == nil {
 		a.logger.Warn(ErrorExpectedNonNillObject.Error(), zap.Uint32("userId", userId), zap.Uint64("confId", confId))
 		return 0, ErrorExpectedNonNillObject
@@ -203,7 +129,7 @@ func (a *App) SetGrainSound(s sound.Sound, userId uint32, confId uint64, tS uint
 	}
 
 	sId := genNextAvaliableSoundIdToWrite(tS, mId)
-	if id, ok := isSoundIdTooOldToWrite(uint64(time.Now().UnixMilli()), sId, mId); ok {
+	if id, ok := isSoundIdTooOldToWrite(tNow, sId, mId); ok {
 		sId = id
 	}
 
