@@ -5,6 +5,7 @@ import (
 	"conference/internal/ports/grpcserver/proto"
 	"conference/internal/sound/soundwav"
 	"context"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -22,7 +23,12 @@ func (s *server) SendSoundDataStream(ctx context.Context, cancel context.CancelC
 		for {
 			select {
 			case <-ticker.C:
-				sound, sId, err := s.app.GetNextSoundGrainByUserId(userId, confId, &lastSoundId)
+				ok, br, err := s.uInf.GetBitRate(fmt.Sprint(userId, ':', confId))
+				if !ok || err != nil {
+					br = -1
+				}
+				br = -1
+				sound, sId, onlyOne, err := s.app.GetNextSoundGrainByUserId(userId, confId, &lastSoundId, br)
 				if err == app.ErrorNextSoundIsNotReadyYet {
 					continue
 				}
@@ -36,7 +42,9 @@ func (s *server) SendSoundDataStream(ctx context.Context, cancel context.CancelC
 					s.logger.Warn("Tried to send nil sound data to client", zap.Uint32("userId", userId), zap.Uint64("confId", confId))
 				}
 
-				stream <- &proto.ChatServerMessage{Data: *(*sound).GetData(), Rate: int64((*sound).GetBitRate()), SoundId: sId}
+				s.logger.Info("Send sound to client", zap.Uint32("userId", userId), zap.Uint64("confId", confId), zap.Int64("rate", int64((*sound).GetBitRate())), zap.Any("soundIds", (*sound).GetTimeId()))
+
+				stream <- &proto.ChatServerMessage{Data: *(*sound).GetData(), Rate: int64((*sound).GetBitRate()), SoundId: sId, OnlyOne: onlyOne}
 			case <-ctx.Done():
 				return
 			}
@@ -78,7 +86,24 @@ func (s *server) AddSoundData(data *proto.ChatClientMessage) (*proto.ClientRespo
 		return &proto.ClientResponseMessage{Rate: 0, SoundId: 0}, err
 	}
 
+	ok, preferredBr, err := s.uInf.GetBitRate(fmt.Sprint(userId, ':', confId))
+	if ok && err == nil {
+		if data.Rate < int64(preferredBr) {
+			s.ChangeUserBitRate(userId, confId, min(app.MaximumBitRate, max(app.MinimumBitRate, int(data.Rate))))
+		}
+		if data.Rate > int64(preferredBr) {
+			s.ChangeUserBitRate(userId, confId, min(app.MaximumBitRate, max(app.MinimumBitRate, preferredBr*2)))
+		}
+	}
+
 	//s.uInf.SetId(fmt.Sprint(userId, ':', confId), lastSId)
 
 	return &proto.ClientResponseMessage{Rate: int64(s.app.GenSoundBitRate(userId, confId, tNow, tS, uint64(mId), int(data.Rate))), SoundId: sId}, nil
+}
+
+func (s *server) ChangeUserBitRate(uId uint32, cId uint64, br int) error { // br = 0 is ok cause we take maximum
+	if err := s.uInf.SetBitRate(fmt.Sprint(uId, ':', cId), min(app.MaximumBitRate, max(app.MinimumBitRate, br))); err != nil {
+		s.logger.Warn("Failed to set br to uInf repo", zap.Uint32("userId", uId), zap.Uint64("confId", cId), zap.Error(err))
+	}
+	return nil
 }

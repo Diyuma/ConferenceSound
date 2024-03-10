@@ -91,6 +91,8 @@ func (s *SoundWav) RebitSound(newBitRate int) error {
 		}
 	}
 
+	s.BitRate = newBitRate
+
 	return nil
 }
 
@@ -175,12 +177,12 @@ func (s *SoundWav) DivideIntoParts(partDuration int) ([]sound.Sound, error) { //
 	return dividedSound, nil
 }
 
-func (s *SoundWav) AmIAuthor(userId uint32) (bool, uint64) { // return 0 if not, otherwise timeSend // !!!!!!!!!CHECK IN PROTO THAT NO ONE SEND TIME 0 - but it is slower - maybe split into dev version and prod
+func (s *SoundWav) AmIAuthor(userId uint32) (bool, bool, uint64) { // return 0 if not, otherwise timeSend // !!!!!!!!!CHECK IN PROTO THAT NO ONE SEND TIME 0 - but it is slower - maybe split into dev version and prod
 	for i, aId := range s.Authors {
 		if aId == userId {
-			return true, s.TimeSend[i]
+			return true, len(s.Authors) == 1, s.TimeSend[i]
 		}
 	}
 
-	return false, 0
+	return false, false, 0
 }

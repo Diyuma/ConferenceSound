@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type SoundServiceClient interface {
 	GetSound(ctx context.Context, in *ClientInfoMessage, opts ...grpc.CallOption) (SoundService_GetSoundClient, error)
 	SendSound(ctx context.Context, in *ChatClientMessage, opts ...grpc.CallOption) (*ClientResponseMessage, error)
+	PingServer(ctx context.Context, in *ClientInfoMessage, opts ...grpc.CallOption) (*EmptyMessage, error)
 	InitUser(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientUserInitResponseMessage, error)
 	InitConf(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientConfInitResponseMessage, error)
 }
@@ -77,6 +78,15 @@ func (c *soundServiceClient) SendSound(ctx context.Context, in *ChatClientMessag
 	return out, nil
 }
 
+func (c *soundServiceClient) PingServer(ctx context.Context, in *ClientInfoMessage, opts ...grpc.CallOption) (*EmptyMessage, error) {
+	out := new(EmptyMessage)
+	err := c.cc.Invoke(ctx, "/protoSound.SoundService/PingServer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *soundServiceClient) InitUser(ctx context.Context, in *EmptyMessage, opts ...grpc.CallOption) (*ClientUserInitResponseMessage, error) {
 	out := new(ClientUserInitResponseMessage)
 	err := c.cc.Invoke(ctx, "/protoSound.SoundService/InitUser", in, out, opts...)
@@ -101,6 +111,7 @@ func (c *soundServiceClient) InitConf(ctx context.Context, in *EmptyMessage, opt
 type SoundServiceServer interface {
 	GetSound(*ClientInfoMessage, SoundService_GetSoundServer) error
 	SendSound(context.Context, *ChatClientMessage) (*ClientResponseMessage, error)
+	PingServer(context.Context, *ClientInfoMessage) (*EmptyMessage, error)
 	InitUser(context.Context, *EmptyMessage) (*ClientUserInitResponseMessage, error)
 	InitConf(context.Context, *EmptyMessage) (*ClientConfInitResponseMessage, error)
 	mustEmbedUnimplementedSoundServiceServer()
@@ -115,6 +126,9 @@ func (UnimplementedSoundServiceServer) GetSound(*ClientInfoMessage, SoundService
 }
 func (UnimplementedSoundServiceServer) SendSound(context.Context, *ChatClientMessage) (*ClientResponseMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendSound not implemented")
+}
+func (UnimplementedSoundServiceServer) PingServer(context.Context, *ClientInfoMessage) (*EmptyMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PingServer not implemented")
 }
 func (UnimplementedSoundServiceServer) InitUser(context.Context, *EmptyMessage) (*ClientUserInitResponseMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitUser not implemented")
@@ -174,6 +188,24 @@ func _SoundService_SendSound_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SoundService_PingServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClientInfoMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoundServiceServer).PingServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protoSound.SoundService/PingServer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoundServiceServer).PingServer(ctx, req.(*ClientInfoMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SoundService_InitUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EmptyMessage)
 	if err := dec(in); err != nil {
@@ -220,6 +252,10 @@ var SoundService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendSound",
 			Handler:    _SoundService_SendSound_Handler,
+		},
+		{
+			MethodName: "PingServer",
+			Handler:    _SoundService_PingServer_Handler,
 		},
 		{
 			MethodName: "InitUser",

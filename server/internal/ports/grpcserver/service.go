@@ -10,7 +10,7 @@ import (
 
 func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService_GetSoundServer) error {
 	//uId := s.GenUserId() // no need to gen there - it is bug
-	uId := uint32(in.UserId)
+	uId := in.UserId
 	cId := in.ConfId
 	ctx, cancel := context.WithCancelCause(context.Background())
 	soundStream := s.SendSoundDataStream(ctx, cancel, uId, cId)
@@ -36,6 +36,11 @@ func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService
 	}
 
 	return nil
+}
+
+func (s *server) PingServer(ctx context.Context, in *proto.ClientInfoMessage) (out *proto.EmptyMessage, err error) {
+	go s.ChangeUserBitRate(in.GetUserId(), in.GetConfId(), 0)
+	return &proto.EmptyMessage{}, nil
 }
 
 func (s *server) SendSound(ctx context.Context, in *proto.ChatClientMessage) (out *proto.ClientResponseMessage, err error) {

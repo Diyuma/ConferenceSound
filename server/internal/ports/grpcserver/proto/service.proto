@@ -8,6 +8,7 @@ option go_package = "./;proto";
 service SoundService {
     rpc GetSound(ClientInfoMessage) returns (stream ChatServerMessage);
     rpc SendSound(ChatClientMessage) returns (ClientResponseMessage);
+    rpc PingServer(ClientInfoMessage) returns (EmptyMessage);
     rpc InitUser(EmptyMessage) returns (ClientUserInitResponseMessage);
     rpc InitConf(EmptyMessage) returns (ClientConfInitResponseMessage);
 }
@@ -16,6 +17,7 @@ message ChatServerMessage {
     repeated float data = 3; // fixed32?
     int64 rate = 2;
     uint64 soundId = 4;
+    bool onlyOne = 5;
 
     reserved 1; // bytes data
 }
@@ -40,7 +42,7 @@ message ClientResponseMessage {
 
 message ClientInfoMessage {
     uint64 confId = 1;
-    uint64 userId = 2;
+    uint32 userId = 2;
 }
 
 message ClientUserInitResponseMessage {

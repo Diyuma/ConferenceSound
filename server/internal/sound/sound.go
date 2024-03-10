@@ -13,6 +13,6 @@ type Sound interface {
 	GetBitRate() int
 	Add(*Sound) error
 	Append(*Sound)
-	AmIAuthor(uint32) (bool, uint64)
+	AmIAuthor(uint32) (bool, bool, uint64)
 	DivideIntoParts(partDuration int) ([]Sound, error)
 }

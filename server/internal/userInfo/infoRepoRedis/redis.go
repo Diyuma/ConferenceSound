@@ -28,20 +28,20 @@ func NewRepo(ctx context.Context, addr string, lr *zap.Logger) *RepositoryRedis 
 	return &RepositoryRedis{ctx: ctx, client: client, logger: lr}
 }
 
-func (repo *RepositoryRedis) SetId(k string, lId uint64) error {
-	return repo.client.Set(repo.ctx, k, lId, repo.tExp).Err()
+func (repo *RepositoryRedis) SetBitRate(k string, br int) error {
+	return repo.client.Set(repo.ctx, k, br, repo.tExp).Err()
 }
 
 // TODO Check for redis.nil error
-func (repo *RepositoryRedis) GetId(k string) (bool, uint64, error) {
-	id, err := repo.client.Get(repo.ctx, k).Uint64()
+func (repo *RepositoryRedis) GetBitRate(k string) (bool, int, error) {
+	br, err := repo.client.Get(repo.ctx, k).Int()
 	if err == redis.Nil {
 		return false, 0, nil
 	}
 	if err != nil {
-		repo.logger.Error("Error occured during reading id from redis", zap.String("key", k))
+		repo.logger.Error("Error occured during reading bitrate from redis", zap.String("key", k))
 		return false, 0, err
 	}
 
-	return true, id, nil
+	return true, br, nil
 }

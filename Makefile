@@ -66,6 +66,9 @@ runOnServer:
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm redisSound
 	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name redisSound --network conf_net --ip 172.18.0.5 -d redis
 
+	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop redisInfo
+	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm redisInfo
+	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name redisInfo --network conf_net --ip 172.18.0.8 -d redis
 
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop Envoy
 	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm Envoy

@@ -23,32 +23,33 @@ var ErrorExpectedNonNillObject error = errors.New("expected to work with real ob
 var ErrorNextSoundIsNotReadyYet error = errors.New("requested sound id to send may be counting on server right now")
 
 const SoundGrainDuration = 256 // in ms
-const MinimumBitRate = 4096
-const TimeToSaveSound = 2047 // in ms
+const MinimumBitRate = 4096 * 2
+const MaximumBitRate = 4096 * 8
+const TimeToSaveSound = 1024 // in ms
 
 func NewApp(repo sound.Repository, sound sound.Sound, logger *zap.Logger) App {
 	return App{repo: repo, sound: sound, logger: logger}
 }
 
-func (a *App) getSoundBySoundId(soundId uint64, userId uint32, confId uint64) (*sound.Sound, uint64, error) {
+func (a *App) getSoundBySoundId(soundId uint64, userId uint32, confId uint64) (*sound.Sound, uint64, bool, error) {
 	ok, s, err := a.repo.GetSound(fmt.Sprintf("%d:%d", soundId, confId))
 	if !ok && err == nil {
-		return nil, 0, ErrorNoSuchSoundIdFound
+		return nil, 0, false, ErrorNoSuchSoundIdFound
 	}
 	a.logger.Info("getSoundBySoundId", zap.Int("soundDuration", (*s).GetSoundDuration()), zap.Int("bitrate", (*s).GetBitRate()), zap.Any("sound", (*s).GetAuthors()), zap.Any("timeIds", (*s).GetTimeId()))
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, false, err
 	}
 
-	if ok, timeSend := (*s).AmIAuthor(userId); ok { // TODO I think that it is correct to send s , not nill there - check it
-		return s, timeSend, nil
+	if ok, onlyOne, timeSend := (*s).AmIAuthor(userId); ok { // TODO I think that it is correct to send s , not nill there - check it
+		return s, timeSend, onlyOne, nil
 	}
 
-	return s, 0, nil
+	return s, 0, false, nil
 }
 
 func (a *App) GetSoundAvaliableTicker() *time.Ticker {
-	return time.NewTicker(time.Millisecond * SoundGrainDuration)
+	return time.NewTicker(time.Millisecond * SoundGrainDuration / 2)
 }
 
 func genNextAvaliableSoundIdToRead(now uint64) uint64 { // TODO change type of sound id to smth less ; it is dagnerous idea because what if server get 2 in a row form 1 user
@@ -56,13 +57,21 @@ func genNextAvaliableSoundIdToRead(now uint64) uint64 { // TODO change type of s
 }
 
 func genNextAvaliableSoundIdToWrite(now uint64, mId uint32) uint64 { // TODO change type of sound id to smth less ; it is dagnerous idea because what if server get 2 in a row form 1 user
-	return now/SoundGrainDuration + 2 + uint64(mId)
+	return now/SoundGrainDuration + 3 + uint64(mId)
 }
 
 func isSoundIdTooOldToRead(now uint64, sId uint64) (uint64, bool) {
 	lSId := genNextAvaliableSoundIdToRead(now)
 	if lSId > sId+TimeToSaveSound/SoundGrainDuration {
 		return lSId, true
+	}
+	return 0, false
+}
+
+func isSoundIdTooNewToRead(now uint64, sId uint64) (uint64, bool) {
+	correct := genNextAvaliableSoundIdToRead(now)
+	if sId > correct {
+		return correct, true
 	}
 	return 0, false
 }
@@ -81,35 +90,60 @@ func genSoundDuration(userId uint32, confId uint64) int { // TODO add logic ther
 }
 
 func (a *App) GenSoundBitRate(userId uint32, confId uint64, now uint64, tS uint64, mId uint64, cBr int) int { // TODO add logic there
-	return 4096 * 2 * 2
-	//return cBr
-	diff := now - tS
-	if diff < SoundGrainDuration/3 {
+	return 8192
+	/*diff := now - tS
+	if diff < SoundGrainDuration/2 {
 		cBr *= 2
 	}
 	for diff >= SoundGrainDuration/2 && cBr > MinimumBitRate {
 		cBr /= 2
 		diff -= SoundGrainDuration / 2
 	}
-	return cBr
+	return cBr*/
 }
 
-func (a *App) GetNextSoundGrainByUserId(uId uint32, cId uint64, lSId *uint64) (*sound.Sound, uint64, error) {
+func (a *App) GetNextSoundGrainByUserId(uId uint32, cId uint64, lSId *uint64, br int) (*sound.Sound, uint64, bool, error) {
 	a.logger.Info("GetNextGrainSound", zap.Uint32("userId", uId), zap.Uint64("confId", cId))
-	if id, ok := isSoundIdTooOldToRead(uint64(time.Now().UnixMilli()), *lSId); ok {
-		(*lSId) = id
+	tNow := uint64(time.Now().UnixMilli())
+	if id, ok := isSoundIdTooOldToRead(tNow, *lSId); ok {
+		*lSId = id
 	}
-	defer func() { (*lSId)++ }()
+
+	/*if id, ok := isSoundIdTooNewToRead(tNow, *lSId); ok {
+		(*lSId) = id
+	}*/
 	/*lastSoundId, err := a.getLastSoundId(userId)
 	if err != nil {
 		return nil, 0, err
 	}*/
-	s, sId, err := a.getSoundBySoundId(*lSId, uId, cId)
+	s, sId, onlyOne, err := a.getSoundBySoundId(*lSId, uId, cId)
 	if err == ErrorNoSuchSoundIdFound {
 		a.logger.Warn("No such sound id found", zap.Uint32("userId", uId), zap.Uint64("confId", cId), zap.Uint64("soundId", *lSId))
-		return nil, 0, ErrorNextSoundIsNotReadyYet
+		fixed := false
+		for (*lSId) < genNextAvaliableSoundIdToWrite(tNow, 0)-2 && !fixed {
+			*lSId += 1
+
+			if s, sId, onlyOne, err = a.getSoundBySoundId(*lSId, uId, cId); err != ErrorNoSuchSoundIdFound {
+				//if s != nil && (*s) != nil {
+				//if ok, onlyAuth, _ := (*s).AmIAuthor(uId); !ok || !onlyAuth {
+				fixed = true
+			}
+			//}
+			//}
+		}
+		if !fixed {
+			return nil, 0, false, ErrorNextSoundIsNotReadyYet
+		}
 	}
-	return s, sId, err
+	if s != nil {
+		a.logger.Info("GetNextGrainSound Final sound id", zap.Uint64("sId", *lSId), zap.Any("Authors", (*s).GetAuthors()))
+	}
+	defer func() { (*lSId)++ }()
+	if s != nil && *s != nil && br != -1 && (*s).GetBitRate() != 8192 {
+		//err = (*s).RebitSound(br)
+		err = (*s).RebitSound(8192)
+	}
+	return s, sId, onlyOne, err
 }
 
 // It may be slow to work with error during not getting sound - may be ok will be better
