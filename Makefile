@@ -39,8 +39,8 @@ BuildAndPushDockerImage:
 # ------- SERVER TARGETS -------
 # don't forget to add commands to change ips there
 uploadToServer:
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 rm -rf "~/conference/soundServer/"
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 rm -rf "~/conference/restServer/"
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST rm -rf "~/conference/soundServer/"
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST rm -rf "~/conference/restServer/"
 
 	rm -rf soundServer
 	mkdir -p soundServer
@@ -50,62 +50,67 @@ uploadToServer:
 
 	cp Makefile envoy-override.yaml soundServer
 
-	scp -i ~/.ssh/yconference -r soundServer lehatr@178.154.202.56:~/conference
+	scp -i &&KEY_PATH -r soundServer $$VM_USER@&&HOST:~/conference
 
-	scp -i ~/.ssh/yconference nginx.conf lehatr@178.154.202.56:~/docker-nginx/nginx.conf
+	scp -i &&KEY_PATH nginx.conf $$VM_USER@&&HOST:~/docker-nginx/nginx.conf
 
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker build "~/conference/soundServer/server" --tag lehatr/conferencesoundserver
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker build "~/conference/soundServer/restServer" --tag lehatr/conferencerestserver
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker build "~/conference/soundServer/server" --tag lehatr/conferencesoundserver
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker build "~/conference/soundServer/restServer" --tag lehatr/conferencerestserver
 	rm -rf soundServer
 
 runOnServer:
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker network rm -f conf_net
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker network create --subnet=172.18.0.0/16 conf_net
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker network rm -f conf_net
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker network create --subnet=172.18.0.0/16 conf_net
 
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop redisSound
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm redisSound
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name redisSound --network conf_net --ip 172.18.0.5 -d redis
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker stop redisSound
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker rm redisSound
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker run --name redisSound --network conf_net --ip 172.18.0.5 -d redis
 
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop redisInfo
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm redisInfo
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name redisInfo --network conf_net --ip 172.18.0.8 -d redis
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker stop redisInfo
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker rm redisInfo
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker run --name redisInfo --network conf_net --ip 172.18.0.8 -d redis
 
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop Envoy
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm Envoy
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker stop Envoy
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker rm Envoy
 
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name Envoy --network conf_net --publish 8085:8085 -d \
-				-v /home/lehatr/conference/soundServer/envoy-override.yaml:/envoy-override.yaml \
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker run --name Envoy --network conf_net --publish 8085:8085 -d \
+				-v /home/$$VM_USER/conference/soundServer/envoy-override.yaml:/envoy-override.yaml \
 				envoyproxy/envoy-dev:c11574972860a40de36acf3ab8d930273f5ece65 \
 				-c /envoy-override.yaml
 
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop soundServer
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm soundServer
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name soundServer --network conf_net --ip 172.18.0.6 -d \
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker stop soundServer
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker rm soundServer
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker run --name soundServer --network conf_net --ip 172.18.0.6 -d \
 				lehatr/conferencesoundserver
 
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop frontFileServer
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm frontFileServer
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name frontFileServer --publish 8086:8086 -d lehatr/conferencerestserver
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker stop frontFileServer
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker rm frontFileServer
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker run --name frontFileServer --publish 8086:8086 -d lehatr/conferencerestserver
 
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker stop docker-nginx
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker rm docker-nginx
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker run --name docker-nginx -p 443:443 --network conf_net -d \
-				-v /home/lehatr/conference/html:/usr/share/nginx/html \
-				-v /home/lehatr/docker-nginx/nginx.conf:/etc/nginx/conf.d/default.conf nginx
+	-ssh -i $$KEY_PATH $$VM_USER@$$HOST sudo docker stop videoServer
+	-ssh -i $$KEY_PATH $$VM_USER@$$HOST sudo docker rm videoServer
+	ssh -i $$KEY_PATH $$VM_USER@$$HOST sudo docker run --name videoServer --network conf_net --ip 172.18.0.7 -d \
+				dikiray/conferencevideoserver
+
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker stop docker-nginx
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker rm docker-nginx
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker run --name docker-nginx -p 443:443 --network conf_net -d \
+				-v /home/$$VM_USER/conference/html:/usr/share/nginx/html \
+				-v /home/$$VM_USER/docker-nginx/nginx.conf:/etc/nginx/conf.d/default.conf nginx
 
 connectToServer:
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST
 
 getLogsFromServer:
 	-rm -r logs
-	-ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo rm -r "~/conference/logs"
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 mkdir -p "~/conference/logs"
+	-ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo rm -r "~/conference/logs"
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST mkdir -p "~/conference/logs"
 
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker cp soundServer:/app/sound_loggs.log "~/conference/logs/sound_loggs.log"
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo docker cp soundServer:/app/repo_loggs.log "~/conference/logs/repo_loggs.log"
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker cp soundServer:/app/sound_loggs.log "~/conference/logs/sound_loggs.log"
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo docker cp soundServer:/app/repo_loggs.log "~/conference/logs/repo_loggs.log"
 	
-	scp -i ~/.ssh/yconference -r lehatr@178.154.202.56:~/conference/logs .
-	ssh -i ~/.ssh/yconference lehatr@178.154.202.56 sudo rm -r "~/conference/logs"
+	scp -i &&KEY_PATH -r $$VM_USER@&&HOST:~/conference/logs .
+	ssh -i &&KEY_PATH $$VM_USER@&&HOST sudo rm -r "~/conference/logs"
 
 ctDockerNetwork:
 	docker network create --subnet=172.18.0.0/16 conf_net
@@ -139,17 +144,15 @@ runEnvoyServerSide:
 
 
 
-### depracated go
 # make
 # docker
-### depreacted envoy
-### deprecated and configure nginx:)))
+# docker nginx
+# docker envoy
+# docker redis
+# need to run on server!
 
 serverSetup:
 	sudo apt-get update
-
-	sudo apt search golang-go
-	sudo apt search gccgo-go
 
 	sudo apt install make
 
@@ -168,3 +171,7 @@ serverSetup:
 	sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 	sudo docker pull envoyproxy/envoy-dev:c11574972860a40de36acf3ab8d930273f5ece65
+	sudo docker pull nginx
+	sudo docker pull redis
+
+	sudo mkdir -p "~/conference/html/conference/dist/"
