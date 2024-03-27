@@ -57,7 +57,7 @@ func genNextAvaliableSoundIdToRead(now uint64) uint64 { // TODO change type of s
 }
 
 func genNextAvaliableSoundIdToWrite(now uint64, mId uint32) uint64 { // TODO change type of sound id to smth less ; it is dagnerous idea because what if server get 2 in a row form 1 user
-	return now/SoundGrainDuration + 3 + uint64(mId)
+	return now/SoundGrainDuration + 4 + uint64(mId)
 }
 
 func isSoundIdTooOldToRead(now uint64, sId uint64) (uint64, bool) {
@@ -120,7 +120,7 @@ func (a *App) GetNextSoundGrainByUserId(uId uint32, cId uint64, lSId *uint64, br
 	if err == ErrorNoSuchSoundIdFound {
 		a.logger.Warn("No such sound id found", zap.Uint32("userId", uId), zap.Uint64("confId", cId), zap.Uint64("soundId", *lSId))
 		fixed := false
-		for (*lSId) < genNextAvaliableSoundIdToWrite(tNow, 0)-2 && !fixed {
+		for (*lSId) < genNextAvaliableSoundIdToWrite(tNow, 0)-3 && !fixed {
 			*lSId += 1
 
 			if s, sId, onlyOne, err = a.getSoundBySoundId(*lSId, uId, cId); err != ErrorNoSuchSoundIdFound {
@@ -139,10 +139,10 @@ func (a *App) GetNextSoundGrainByUserId(uId uint32, cId uint64, lSId *uint64, br
 		a.logger.Info("GetNextGrainSound Final sound id", zap.Uint64("sId", *lSId), zap.Any("Authors", (*s).GetAuthors()))
 	}
 	defer func() { (*lSId)++ }()
-	if s != nil && *s != nil && br != -1 && (*s).GetBitRate() != 8192 {
+	/*if s != nil && *s != nil && br != -1 && (*s).GetBitRate() != 8192 {
 		//err = (*s).RebitSound(br)
 		err = (*s).RebitSound(8192)
-	}
+	}*/
 	return s, sId, onlyOne, err
 }
 
