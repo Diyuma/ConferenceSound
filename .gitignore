@@ -1,2 +1,8 @@
 ___*
 .DS_Store
+
+logs
+*.log
+.bashrc
+
+*save
