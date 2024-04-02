@@ -60,8 +60,8 @@ func RunServer(addr string, sRepoAddr string, uInfRepoAddr string, slg ServerLog
 
 func main() {
 	var serverAddr = flag.String("serveraddr", ":9090", "Server listening address")
-	var sRedisAddr = flag.String("sredisaddr", ":8088", "Redis for sound listening address")
-	var uInfRedisAddr = flag.String("uinfredisaddr", ":8089", "Redis for user info listening address")
+	var sRedisAddr = flag.String("sredisaddr", "redis_sound:6379", "Redis for sound listening address")
+	var uInfRedisAddr = flag.String("uinfredisaddr", "redis_info:6379", "Redis for user info listening address")
 	flag.Parse()
 
 	if serverAddr == nil || sRedisAddr == nil || uInfRedisAddr == nil {
