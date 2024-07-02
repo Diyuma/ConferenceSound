@@ -8,9 +8,11 @@ import (
 	"conference/internal/userInfo/infoRepoRedis"
 	"context"
 	"flag"
+	"net/http"
 
 	"log"
 
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
@@ -58,6 +60,35 @@ func RunServer(addr string, sRepoAddr string, uInfRepoAddr string, slg ServerLog
 	}
 }
 
+func chatHandler(w http.ResponseWriter, r *http.Request) {
+	conn, _ := upgrader.Upgrade(w, r, nil)
+	defer conn.Close()
+	buf := make([]byte, 1000)
+	for i := 0; i < 1000; i++ {
+		buf[i] = byte(i % 128)
+	}
+	for i := 0; i < 1000; i++ {
+		_, _, _ = conn.ReadMessage()
+		conn.WriteMessage(websocket.BinaryMessage, buf)
+	}
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+func RunServerWebSocket(addr string, port string) {
+	var httpSrv http.Server
+	httpSrv.Addr = addr + ":" + port
+	http.HandleFunc("/", chatHandler)
+	e := httpSrv.ListenAndServe()
+	if e != nil {
+		log.Fatal(e)
+	}
+}
+
 func main() {
 	var serverAddr = flag.String("serveraddr", ":9090", "Server listening address")
 	var sRedisAddr = flag.String("sredisaddr", "redis_sound:6379", "Redis for sound listening address")
@@ -68,5 +99,6 @@ func main() {
 		log.Fatal("Can't parse server address or repoaddress from flags")
 	}
 
+	go RunServerWebSocket("", "9091")
 	RunServer(*serverAddr, *sRedisAddr, *uInfRedisAddr, ServerLoggers{})
 }

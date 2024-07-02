@@ -13,11 +13,11 @@ genProto:
 buildAndRun:
 	docker compose -p conference down
 	docker compose build
-	docker compose -p conference up -d
+	docker compose -p conference up
 
 run:
 	docker compose -p conference down
-	docker compose -p conference up -d
+	docker compose -p conference up
 
 stop:
 	docker compose -p conference down
@@ -28,14 +28,14 @@ getLogs:
 	docker cp conference-sound_server-1:/app/repo_loggs.log "./logs/repo_loggs.log"
 
 # ------- SERVER TARGETS -------
-# it's not expected that they will work both on local machine and remote ubunty in same way - so care!
+# it's not expected that they will work both on local machine and remote ubuntu in same way - so care!
 uploadToServerPrepareDir:
 	ssh -i ${KEY_PATH} ${VM_USER}@${HOST} sudo rm -rf "~/conferencev2/{soundServer/,restServer/,nginx.conf,envoy-override.yaml,.bashrc,go.work,go.work.sum,Makefile,ssl.conf,compose.yaml}"
 
 uploadToServerNginxAndSslConf:
-	cp nginx.conf nginx_server.conf
-	sed -i '' 's/listen 443;/listen 443 ssl;/g' nginx_server.conf
-	scp -i ${SSH_KEY_PATH} nginx_server.conf ${VM_USER}@${HOST}:~/conferencev2/nginx.conf
+	cp nginx.conf nginx_server_generated.conf
+	sed -i '' 's/listen 443;/listen 443 ssl;/g' nginx_server_generated.conf
+	scp -i ${SSH_KEY_PATH} nginx_server_generated.conf ${VM_USER}@${HOST}:~/conferencev2/nginx.conf
 
 uploadAndRunServer: uploadToServerPrepareDir uploadToServerNginxAndSslConf
 	scp -i ${SSH_KEY_PATH} -r restServer server ${VM_USER}@${HOST}:~/conferencev2
