@@ -3,17 +3,18 @@ package grpcserver
 import (
 	"context"
 
-	"conference/internal/ports/grpcserver/proto"
+	"conference/internal/ports/grpcserver/protosound"
 
 	"go.uber.org/zap"
 )
 
-func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService_GetSoundServer) error {
+func (s *Server) GetSound(in *protosound.ClientInfoMessage, stream protosound.SoundService_GetSoundServer) error {
 	//uId := s.GenUserId() // no need to gen there - it is bug
 	uId := in.UserId
 	cId := in.ConfId
 	ctx, cancel := context.WithCancelCause(context.Background())
 	soundStream := s.SendSoundDataStream(ctx, cancel, uId, cId)
+	s.logger.Info("sound stream established")
 	//_ = s.SendSoundDataStream(ctx, cancel, uId, cId)?????????????????????? why i need it
 	for {
 		select {
@@ -35,15 +36,17 @@ func (s *server) GetSound(in *proto.ClientInfoMessage, stream proto.SoundService
 		}
 	}
 
+	s.logger.Error("GetSound failed")
+
 	return nil
 }
 
-func (s *server) PingServer(ctx context.Context, in *proto.ClientInfoMessage) (out *proto.EmptyMessage, err error) {
+func (s *Server) PingServer(ctx context.Context, in *protosound.ClientInfoMessage) (out *protosound.EmptyMessage, err error) {
 	go s.ChangeUserBitRate(in.GetUserId(), in.GetConfId(), 0)
-	return &proto.EmptyMessage{}, nil
+	return &protosound.EmptyMessage{}, nil
 }
 
-func (s *server) SendSound(ctx context.Context, in *proto.ChatClientMessage) (out *proto.ClientResponseMessage, err error) {
+func (s *Server) SendSound(ctx context.Context, in *protosound.ChatClientMessage) (out *protosound.ClientResponseMessage, err error) {
 	defer func() {
 		s.logger.Info("Send response to sound data:",
 			zap.Int64("rate", out.GetRate()),
@@ -77,20 +80,20 @@ func (s *server) SendSound(ctx context.Context, in *proto.ChatClientMessage) (ou
 	return r, err
 }
 
-func (s *server) InitUser(ctx context.Context, in *proto.EmptyMessage) (out *proto.ClientUserInitResponseMessage, err error) {
+func (s *Server) InitUser(ctx context.Context, in *protosound.EmptyMessage) (out *protosound.ClientUserInitResponseMessage, err error) {
 	defer func() {
 		s.logger.Info("Init client send:",
 			zap.Uint32("userId", out.GetUserId()))
 	}()
 
-	return &proto.ClientUserInitResponseMessage{UserId: s.GenUserId()}, nil
+	return &protosound.ClientUserInitResponseMessage{UserId: s.GenUserId()}, nil
 }
 
-func (s *server) InitConf(ctx context.Context, in *proto.EmptyMessage) (out *proto.ClientConfInitResponseMessage, err error) {
+func (s *Server) InitConf(ctx context.Context, in *protosound.EmptyMessage) (out *protosound.ClientConfInitResponseMessage, err error) {
 	defer func() {
 		s.logger.Info("Init conf send:",
 			zap.Uint64("confId", out.GetConfId()))
 	}()
 
-	return &proto.ClientConfInitResponseMessage{ConfId: s.GenConfId()}, nil
+	return &protosound.ClientConfInitResponseMessage{ConfId: s.GenConfId()}, nil
 }

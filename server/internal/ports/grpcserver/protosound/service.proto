@@ -1,9 +1,9 @@
 syntax = "proto3";
 //import "validate/validate.proto";
 
-package protoSound;
+package protosound;
 
-option go_package = "./;proto";
+option go_package = "./;protosound";
 
 service SoundService {
     rpc GetSound(ClientInfoMessage) returns (stream ChatServerMessage);
