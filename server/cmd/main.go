@@ -2,6 +2,7 @@ package main
 
 import (
 	"conference/internal/app"
+	grpcoverwebsocket "conference/internal/ports/grpc_over_websocket"
 	"conference/internal/ports/grpcserver"
 	"conference/internal/sound/soundwav"
 	"conference/internal/soundadapters/reporedis"
@@ -21,7 +22,7 @@ type ServerLoggers struct {
 
 // TODO: move sound interface choosing there
 // TODO: add app logger (now server logger and app logger are merged)
-func RunServer(addr string, sRepoAddr string, uInfRepoAddr string, slg ServerLoggers, opts ...grpcserver.ServerOption) {
+func RunServer(addr string, websocketAddr string, sRepoAddr string, uInfRepoAddr string, slg ServerLoggers, opts ...grpcserver.ServerOption) {
 	var err error
 
 	if slg.ServerLogger == nil {
@@ -32,7 +33,7 @@ func RunServer(addr string, sRepoAddr string, uInfRepoAddr string, slg ServerLog
 		}
 		slg.ServerLogger, err = cfg.Build() // zap.NewProduction(zap.WithCaller(true))
 		if err != nil {
-			log.Fatalf("Failed to init logger: %v", err)
+			log.Fatalf("failed to init logger: %v", err)
 		}
 		defer slg.ServerLogger.Sync()
 	}
@@ -45,16 +46,17 @@ func RunServer(addr string, sRepoAddr string, uInfRepoAddr string, slg ServerLog
 		}
 		slg.RepoLogger, err = cfg.Build() // zap.NewProduction(zap.WithCaller(true))
 		if err != nil {
-			log.Fatalf("Failed to init logger: %v", err)
+			log.Fatalf("failed to init logger: %v", err)
 		}
 		defer slg.RepoLogger.Sync()
 	}
 
-	lis, s := grpcserver.NewServer(app.NewApp(reporedis.NewRepo(context.Background(), sRepoAddr, slg.RepoLogger), soundwav.NewEmptySound(), slg.ServerLogger), infoRepoRedis.NewRepo(context.Background(), uInfRepoAddr, slg.RepoLogger), slg.ServerLogger, addr, opts...)
+	lis, grpcS, server := grpcserver.NewServer(app.NewApp(reporedis.NewRepo(context.Background(), sRepoAddr, slg.RepoLogger), soundwav.NewEmptySound(), slg.ServerLogger), infoRepoRedis.NewRepo(context.Background(), uInfRepoAddr, slg.RepoLogger), slg.ServerLogger, addr, opts...)
+	go grpcoverwebsocket.RunServerWebSocket(websocketAddr, server, slg.ServerLogger)
 
-	slg.ServerLogger.Info("Server is listenning", zap.String("addr", addr))
-	if err := s.Serve(lis); err != nil {
-		slg.ServerLogger.Fatal("Failed to serve", zap.Error(err))
+	slg.ServerLogger.Info("server is listenning", zap.String("addr", addr))
+	if err := grpcS.Serve(lis); err != nil {
+		slg.ServerLogger.Fatal("failed to serve", zap.Error(err))
 	}
 }
 
@@ -68,5 +70,5 @@ func main() {
 		log.Fatal("Can't parse server address or repoaddress from flags")
 	}
 
-	RunServer(*serverAddr, *sRedisAddr, *uInfRedisAddr, ServerLoggers{})
+	RunServer(*serverAddr, ":9091", *sRedisAddr, *uInfRedisAddr, ServerLoggers{})
 }

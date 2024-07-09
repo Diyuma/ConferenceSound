@@ -25,7 +25,7 @@ static_resources:
                   - name: local_service
                     domains: ["*"]
                     routes:
-                       - match: { prefix: "/protoSound.SoundService" }
+                       - match: { prefix: "/protosound.SoundService" }
                          route:
                            cluster: sound_service
                            timeout: 0s

@@ -33,13 +33,15 @@ func NewApp(repo sound.Repository, sound sound.Sound, logger *zap.Logger) App {
 
 func (a *App) getSoundBySoundId(soundId uint64, userId uint32, confId uint64) (*sound.Sound, uint64, bool, error) {
 	ok, s, err := a.repo.GetSound(fmt.Sprintf("%d:%d", soundId, confId))
-	if !ok && err == nil {
+	if (!ok && err == nil) || s == nil {
 		return nil, 0, false, ErrorNoSuchSoundIdFound
 	}
-	a.logger.Info("getSoundBySoundId", zap.Int("soundDuration", (*s).GetSoundDuration()), zap.Int("bitrate", (*s).GetBitRate()), zap.Any("sound", (*s).GetAuthors()), zap.Any("timeIds", (*s).GetTimeId()))
+
 	if err != nil {
 		return nil, 0, false, err
 	}
+
+	a.logger.Info("getSoundBySoundId", zap.Int("soundDuration", (*s).GetSoundDuration()), zap.Int("bitrate", (*s).GetBitRate()), zap.Any("sound", (*s).GetAuthors()), zap.Any("timeIds", (*s).GetTimeId()))
 
 	if ok, onlyOne, timeSend := (*s).AmIAuthor(userId); ok { // TODO I think that it is correct to send s , not nill there - check it
 		return s, timeSend, onlyOne, nil

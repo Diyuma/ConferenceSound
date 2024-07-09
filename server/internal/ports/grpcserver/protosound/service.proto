@@ -1,9 +1,9 @@
 syntax = "proto3";
 //import "validate/validate.proto";
 
-package protoSound;
+package protosound;
 
-option go_package = "./;proto";
+option go_package = "./;protosound";
 
 service SoundService {
     rpc GetSound(ClientInfoMessage) returns (stream ChatServerMessage);
@@ -38,6 +38,7 @@ message ChatClientMessage {
 message ClientResponseMessage {
     int64 rate = 1;
     uint64 soundId = 2;
+    uint32 messageInd = 3;
 }
 
 message ClientInfoMessage {
