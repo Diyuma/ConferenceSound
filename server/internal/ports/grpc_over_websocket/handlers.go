@@ -53,34 +53,3 @@ func (s *server) SendSoundHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 }
-
-/*buf := make([]byte, 1000)
-for i := 0; i < 1000; i++ {
-	buf[i] = byte(i % 128)
-}
-for i := 0; i < 1000; i++ {
-	_, buf, err = conn.ReadMessage()
-	if err != nil {
-		log.Println("Failed to read message, error:", err)
-	}
-	if i == 0 {
-		log.Println("got buffer", buf)
-	}
-	//conn.WriteMessage(websocket.BinaryMessage, buf)
-	msg := &protosound.ClientInfoMessage{ConfId: 10, UserId: 25}
-
-	str := ""
-	c, d := proto.Marshal(msg)
-	for _, ch := range c {
-		str += fmt.Sprint(int(ch))
-		str += " "
-	}
-	s.lg.Info("buf", zap.Any("buf", str))
-	a, b := msg.Descriptor()
-	s.lg.Info("buf", zap.Any("buf2", a), zap.Any("buf2", b))
-	c, d = proto.Marshal(msg) //msg.Descriptor()
-	s.lg.Info("buf", zap.Any("buf2", c), zap.Any("buf2", d))
-	//e, f := grpc.Codec.Marshal(*msg) //msg.Descriptor()
-	//s.lg.Info("buf", zap.Any("buf2", e), zap.Any("buf2", f))
-	conn.WriteMessage(websocket.BinaryMessage, []byte(msg.String()))
-}*/

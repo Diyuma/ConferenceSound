@@ -38,6 +38,7 @@ message ChatClientMessage {
 message ClientResponseMessage {
     int64 rate = 1;
     uint64 soundId = 2;
+    uint32 messageInd = 3;
 }
 
 message ClientInfoMessage {

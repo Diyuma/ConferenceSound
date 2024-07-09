@@ -28,18 +28,23 @@ func NewRepo(ctx context.Context, addr string, lr *zap.Logger) *RepositoryRedis 
 		Password: "",
 		DB:       0,
 	})
-	return &RepositoryRedis{ctx: ctx, client: client, logger: lr}
+	return &RepositoryRedis{ctx: ctx, client: client, logger: lr.With(zap.String("app", "redisRepo"))}
 }
 
 func (repo *RepositoryRedis) SetSound(k string, v *sound.Sound, tExp time.Duration) error {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(*(*v).(*soundwav.SoundWav)); err != nil {
-		repo.logger.Error("Error occured during writing sound to redis", zap.String("key", k))
+		repo.logger.Error("Error occured during encoding sound", zap.String("key", k), zap.Error(err))
 		return err
 	}
 
-	return repo.client.Set(repo.ctx, k, buf.String(), tExp).Err()
+	if err := repo.client.Set(repo.ctx, k, buf.String(), tExp).Err(); err != nil {
+		repo.logger.Error("Error occured during set to redis", zap.String("key", k), zap.Error(err))
+		return err
+	}
+
+	return nil
 }
 
 // TODO Check for redis.nil error
@@ -51,7 +56,7 @@ func (repo *RepositoryRedis) GetSound(k string) (bool, *sound.Sound, error) {
 		return false, nil, nil
 	}
 	if err != nil {
-		repo.logger.Error("Error occured during reading sound from redis", zap.String("key", k))
+		repo.logger.Error("Error occured during reading sound from redis", zap.String("key", k), zap.Error(err))
 		return false, nil, err
 	}
 
@@ -74,7 +79,7 @@ func (repo *RepositoryRedis) GetDelSound(k string) (bool, *sound.Sound, error) {
 		return false, nil, nil
 	}
 	if err != nil {
-		repo.logger.Error("Error occured during reading sound from redis", zap.String("key", k))
+		repo.logger.Error("Error occured during reading sound from redis", zap.String("key", k), zap.Error(err))
 		return false, nil, err
 	}
 

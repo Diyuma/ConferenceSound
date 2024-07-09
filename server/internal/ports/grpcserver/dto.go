@@ -85,7 +85,7 @@ func (s *Server) AddSoundData(data *protosound.ChatClientMessage) (*protosound.C
 	sId, err := s.app.SetGrainSound(soundwav.NewSound(&data.Data, int(data.Rate), len(data.Data)/int(data.Rate), []uint32{userId}, []uint64{}), userId, confId, tS, mId, tNow)
 	if err != nil {
 		s.logger.Warn("failed to set grain sound", zap.Error(err))
-		return &protosound.ClientResponseMessage{Rate: 0, SoundId: 0}, err
+		return &protosound.ClientResponseMessage{Rate: 0, SoundId: 0, MessageInd: 0}, err
 	}
 
 	ok, preferredBr, err := s.uInf.GetBitRate(fmt.Sprint(userId, ':', confId))
@@ -100,7 +100,7 @@ func (s *Server) AddSoundData(data *protosound.ChatClientMessage) (*protosound.C
 
 	//s.uInf.SetId(fmt.Sprint(userId, ':', confId), lastSId)
 
-	return &protosound.ClientResponseMessage{Rate: int64(s.app.GenSoundBitRate(userId, confId, tNow, tS, uint64(mId), int(data.Rate))), SoundId: sId}, nil
+	return &protosound.ClientResponseMessage{Rate: int64(s.app.GenSoundBitRate(userId, confId, tNow, tS, uint64(mId), int(data.Rate))), SoundId: sId, MessageInd: data.GetMessageInd()}, nil
 }
 
 func (s *Server) ChangeUserBitRate(uId uint32, cId uint64, br int) error { // br = 0 is ok cause we take maximum
