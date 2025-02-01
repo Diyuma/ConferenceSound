@@ -1,7 +1,7 @@
 .ONESHELL:
 .SHELLFLAGS += -e
 include .bashrcDemo
-include .bashrc
+-include .bashrc
 
 # targets for local running
 
