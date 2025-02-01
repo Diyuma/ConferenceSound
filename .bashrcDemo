@@ -1,0 +1,4 @@
+export HOST=EMPTY
+export VM_USER=EMPTY
+export SSH_KEY_PATH=EMPTY
+export HTML_PATH=/Users/lehatrutenb/Desktop/tmp/ConferenceClient/build_html

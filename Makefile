@@ -1,6 +1,9 @@
 .ONESHELL:
 .SHELLFLAGS += -e
+include .bashrcDemo
 include .bashrc
+
+# targets for local running
 
 genProto:
 	cd server/internal/ports/grpcserver/
@@ -63,13 +66,6 @@ getLogsServer:
 	
 	scp -i ${KEY_PATH} -r ${VM_USER}@${HOST}:~/conferencev2/logs .
 	ssh -i ${KEY_PATH} ${VM_USER}@${HOST} sudo rm -r "~/conferencev2/logs"
-
-# make
-# docker
-# docker nginx
-# docker envoy
-# docker redis
-# need to run on server!
 
 serverDownloadLibs:
 	sudo apt-get update
